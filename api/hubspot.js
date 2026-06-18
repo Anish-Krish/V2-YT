@@ -174,6 +174,27 @@ async function getAll(token) {
   // Fri/Sat/Sun = full week done.
   const daysElapsed = (dow === 0 || dow >= 5) ? 5 : Math.max(1, dow - 1);
 
+  // ── Weekly history from monthly calls ─────────────────────────
+  // Group Anish's monthly calls by ISO week (Mon-based) so the rolling trend
+  // chart can show actual prior weeks without extra API calls.
+  const weeklyHistory = {};
+  for (const c of anishCallsM) {
+    const ts = Number(c.properties.hs_createdate);
+    if (!ts) continue;
+    const d = new Date(ts);
+    const day = d.getDay();
+    const mon = new Date(d);
+    mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+    mon.setHours(0, 0, 0, 0);
+    const wk = mon.toISOString().slice(0, 10);
+    if (!weeklyHistory[wk]) weeklyHistory[wk] = [];
+    weeklyHistory[wk].push(c);
+  }
+  const weeklyTrend = Object.entries(weeklyHistory).map(([wk, calls]) => {
+    const f = tallyFunnel(calls);
+    return { week: wk, dials: f.dials, meetings: f.meetingSet };
+  }).sort((a, b) => a.week.localeCompare(b.week));
+
   return {
     monthly: {
       appts: apptAnish + apptMichelle,
@@ -199,6 +220,7 @@ async function getAll(token) {
         avgDials: +(wfm.dials / daysElapsed).toFixed(1),
       },
     },
+    weeklyTrend,
     meta: { michFloorMs },
   };
 }

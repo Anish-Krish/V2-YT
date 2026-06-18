@@ -786,16 +786,17 @@ function renderFunnel(containerId, f) {
 // ── Bar chart ─────────────────────────────────────────────────
 function renderBarChart(byDay) {
   const DAYS=['Mon','Tue','Wed','Thu','Fri'];
-  const maxVal=Math.max(1,...DAYS.map(d=>byDay.Anish[d]));
-  const H=72;
+  const maxVal=Math.max(1,...DAYS.flatMap(d=>[byDay.Anish[d],byDay.Michelle[d]]));
+  const H=52;
   $('barChart').innerHTML=DAYS.map(day=>{
-    const a=byDay.Anish[day];
-    const aH=Math.max(2,Math.round(a/maxVal*H));
+    const a=byDay.Anish[day], m=byDay.Michelle[day];
+    const aH=Math.max(2,Math.round(a/maxVal*H)), mH=Math.max(2,Math.round(m/maxVal*H));
     return `<div class="bar-day">
       <div class="bar-group">
-        <div class="bar-col anish" style="height:${aH}px" title="${a} dials"></div>
+        <div class="bar-col anish"    style="height:${aH}px" title="Anish ${a}"></div>
+        <div class="bar-col michelle" style="height:${mH}px" title="Michelle ${m}"></div>
       </div>
-      <div class="bar-nums">${a}</div>
+      <div class="bar-nums">${a}/${m}</div>
       <div class="bar-lbl">${day}</div>
     </div>`;
   }).join('');
@@ -804,12 +805,15 @@ function renderBarChart(byDay) {
 // ── Rolling trend ─────────────────────────────────────────────
 const TREND_KEY='jarvis_trend_v1';
 function saveTrend(data) {
-  const ws=isoWeekStart(), history=loadJSON(TREND_KEY,[]);
-  const idx=history.findIndex(e=>e.week===ws);
-  const entry={week:ws,label:new Date(ws+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}),meetings:data.weekly.weekMeetings,dials:data.weekly.anish.dials};
-  if(idx>=0)history[idx]=entry; else history.push(entry);
-  const trimmed=history.sort((a,b)=>a.week.localeCompare(b.week)).slice(-8);
-  saveJSON(TREND_KEY,trimmed); renderTrend(trimmed);
+  // Use server-derived weekly breakdown of monthly calls — gives real prior weeks
+  // without extra API calls, instead of accumulating one week at a time.
+  if(!data.weeklyTrend||!data.weeklyTrend.length) return;
+  const enriched=data.weeklyTrend.map(e=>({
+    ...e,
+    label:new Date(e.week+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}),
+  }));
+  const last4=enriched.slice(-4);
+  saveJSON(TREND_KEY,last4); renderTrend(last4);
 }
 function renderTrend(history) {
   const placeholder='<div style="font-size:11px;color:var(--text-tertiary);padding:4px 0">Builds automatically — 1 bar per week</div>';
