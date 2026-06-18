@@ -13,8 +13,8 @@
 const ANISH_ID    = '88049636';
 const MICHELLE_ID = '93119217';
 
-// Michelle's first 2 days (Jun 8–9 2026) were over-reported.
-const MICHELLE_CALL_FLOOR = '2026-06-10';
+// Michelle's call data is only reliable from Jun 16 onward.
+const MICHELLE_CALL_FLOOR = '2026-06-16';
 
 // ── Call disposition UUIDs (from sync-sales.py) ──────────────────
 const CONNECT_DISPOSITIONS = new Set([

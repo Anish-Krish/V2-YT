@@ -481,21 +481,11 @@ body::after {
               <div class="wk-stat-lbl">Connects</div>
             </div>
           </div>
-          <div class="bar-legend">
-            <span><span class="legend-dot" style="background:var(--cyan)"></span> <span class="legend-txt">Anish</span></span>
-            <span><span class="legend-dot" style="background:rgba(0,212,255,0.35)"></span> <span class="legend-txt">Michelle</span></span>
-          </div>
           <div class="bar-area" id="barChart"></div>
-          <div class="funnel-person-row" style="margin-top:10px">
-            <div>
-              <div class="funnel-person-label">Anish</div>
-              <div id="wFunnelAnish"></div>
-            </div>
-            <div>
-              <div class="funnel-person-label">Michelle</div>
-              <div id="wFunnelMichelle"></div>
-            </div>
+          <div style="margin-top:10px">
+            <div id="wFunnelAnish"></div>
           </div>
+          <div style="display:none" id="wFunnelMichelle"></div>
         </div>
 
         <!-- Rolling trend -->
@@ -766,9 +756,8 @@ function updateSprints(data) {
   // Weekly stats
   setText('weekLabel', weekRange());
   setText('wkMeetings', wm);
-  const totalAvg=+((data.weekly.anish.avgDials+data.weekly.michelle.avgDials)).toFixed(1);
-  setText('wkAvg', totalAvg);
-  setText('wkConn', data.weekly.anish.connects+data.weekly.michelle.connects);
+  setText('wkAvg', data.weekly.anish.avgDials);
+  setText('wkConn', data.weekly.anish.connects);
 }
 
 // ── Funnel renderer ───────────────────────────────────────────
@@ -791,17 +780,16 @@ function renderFunnel(containerId, f) {
 // ── Bar chart ─────────────────────────────────────────────────
 function renderBarChart(byDay) {
   const DAYS=['Mon','Tue','Wed','Thu','Fri'];
-  const maxVal=Math.max(1,...DAYS.flatMap(d=>[byDay.Anish[d],byDay.Michelle[d]]));
+  const maxVal=Math.max(1,...DAYS.map(d=>byDay.Anish[d]));
   const H=72;
   $('barChart').innerHTML=DAYS.map(day=>{
-    const a=byDay.Anish[day],m=byDay.Michelle[day];
-    const aH=Math.max(2,Math.round(a/maxVal*H)), mH=Math.max(2,Math.round(m/maxVal*H));
+    const a=byDay.Anish[day];
+    const aH=Math.max(2,Math.round(a/maxVal*H));
     return `<div class="bar-day">
       <div class="bar-group">
-        <div class="bar-col anish"    style="height:${aH}px" title="Anish ${a}"></div>
-        <div class="bar-col michelle" style="height:${mH}px" title="Michelle ${m}"></div>
+        <div class="bar-col anish" style="height:${aH}px" title="${a} dials"></div>
       </div>
-      <div class="bar-nums">${a}/${m}</div>
+      <div class="bar-nums">${a}</div>
       <div class="bar-lbl">${day}</div>
     </div>`;
   }).join('');
@@ -812,7 +800,7 @@ const TREND_KEY='jarvis_trend_v1';
 function saveTrend(data) {
   const ws=isoWeekStart(), history=loadJSON(TREND_KEY,[]);
   const idx=history.findIndex(e=>e.week===ws);
-  const entry={week:ws,label:new Date(ws+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}),meetings:data.weekly.weekMeetings,dials:data.weekly.anish.dials+data.weekly.michelle.dials};
+  const entry={week:ws,label:new Date(ws+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}),meetings:data.weekly.weekMeetings,dials:data.weekly.anish.dials};
   if(idx>=0)history[idx]=entry; else history.push(entry);
   const trimmed=history.sort((a,b)=>a.week.localeCompare(b.week)).slice(-8);
   saveJSON(TREND_KEY,trimmed); renderTrend(trimmed);
