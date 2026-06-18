@@ -6,157 +6,290 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#050506">
-<title>Dashboard</title>
-
+<title>Jarvis</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
-
 <style>
-/* ===== Shared design tokens (same as the rest of the dashboard) ===== */
 :root {
-  --text-primary: #FAFAFA;
+  --text-primary:   #FAFAFA;
   --text-secondary: #B8B6B0;
-  --text-tertiary: #76746E;
-  --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --text-tertiary:  #76746E;
+  --font:      -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --green:  #6BE3A4;
+  --blue:   #60A5FA;
+  --amber:  #F2C063;
+  --orange: #FB923C;
+  --red:    #F87171;
+  --card-bg: rgba(255,255,255,0.04);
+  --card-border: rgba(255,255,255,0.07);
 }
-* { box-sizing: border-box; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 html, body {
-  margin: 0; padding: 0;
-  background: #050506;
-  color: var(--text-secondary);
-  font-family: var(--font);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  background: #050506; color: var(--text-secondary);
+  font-family: var(--font); -webkit-font-smoothing: antialiased;
 }
 body {
-  min-height: 100vh; position: relative; overflow-x: hidden;
-  padding: max(28px, env(safe-area-inset-top)) 20px 60px;
+  min-height: 100vh; overflow-x: hidden;
+  padding: max(20px, env(safe-area-inset-top)) 18px 60px;
 }
-/* Soft drifting glow + dot texture (matches the other pages). */
 body::before {
-  content: ''; position: fixed; inset: 0;
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: -2;
   background:
-    radial-gradient(circle at 82% 14%, rgba(224,118,88,0.16), transparent 45%),
-    radial-gradient(circle at 18% 90%, rgba(180,180,200,0.06), transparent 50%);
-  filter: blur(40px); pointer-events: none; z-index: -2;
+    radial-gradient(circle at 82% 14%, rgba(224,118,88,0.14), transparent 45%),
+    radial-gradient(circle at 18% 90%, rgba(180,180,200,0.05), transparent 50%);
+  filter: blur(40px);
   animation: drift 36s ease-in-out infinite alternate;
 }
 body::after {
-  content: ''; position: fixed; inset: 0;
-  background-image: radial-gradient(rgba(255,255,255,0.014) 1px, transparent 1px);
-  background-size: 3px 3px; pointer-events: none; z-index: -1;
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: -1;
+  background-image: radial-gradient(rgba(255,255,255,0.012) 1px, transparent 1px);
+  background-size: 3px 3px;
 }
 @keyframes drift { 0%{transform:translate3d(0,0,0)} 100%{transform:translate3d(-22px,14px,0)} }
 
-.page { max-width: 1100px; margin: 0 auto; }
+.page { max-width: 1160px; margin: 0 auto; }
+
+/* ── Header ── */
+.hub-head {
+  display: flex; align-items: center; gap: 14px; margin-bottom: 20px;
+}
 .dash-title {
-  margin: 0 0 18px; font-size: 28px; font-weight: 700; letter-spacing: -0.025em;
-  background: linear-gradient(180deg, #FFFFFF 0%, #C7C4BC 120%);
+  font-size: 26px; font-weight: 700; letter-spacing: -0.025em;
+  background: linear-gradient(180deg,#FFF 0%,#C7C4BC 120%);
   -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent; color: transparent;
+  -webkit-text-fill-color: transparent; flex-shrink: 0;
 }
-@media (max-width: 480px) { .dash-title { font-size: 22px; } }
-
-/* ===== BENTO GRID ===== */
-.bento {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  grid-auto-rows: 168px;
-  grid-auto-flow: dense;
-  gap: 14px;
+.mini-nav {
+  display: flex; gap: 6px; flex: 1;
 }
-.tile {
-  --accent: #6BE3A4;                 /* each tile overrides this */
-  position: relative; overflow: hidden;
-  display: flex; flex-direction: column;
-  padding: 20px;
-  border-radius: 18px;
-  text-decoration: none;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.06);
-  backdrop-filter: blur(24px) saturate(1.2);
-  -webkit-backdrop-filter: blur(24px) saturate(1.2);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
-  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+.mini-nav a {
+  font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+  color: var(--text-tertiary); text-decoration: none;
+  padding: 6px 12px; border-radius: 8px;
+  border: 1px solid transparent;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
-/* The "its own style" bit — a faint accent glow per tile. */
-.tile::before {
-  content: ''; position: absolute; inset: 0; pointer-events: none;
-  background: radial-gradient(circle at 78% 18%,
-              color-mix(in srgb, var(--accent) 22%, transparent), transparent 55%);
-  opacity: 0.7; transition: opacity 0.18s ease;
+.mini-nav a:hover {
+  color: var(--text-primary); background: rgba(255,255,255,0.05);
+  border-color: var(--card-border);
 }
-.tile:hover {
-  transform: translateY(-3px);
-  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
-  box-shadow: 0 16px 48px rgba(0,0,0,0.55);
+.head-right {
+  display: flex; align-items: center; gap: 10px; flex-shrink: 0;
 }
-.tile:hover::before { opacity: 1; }
-
-/* Tile sizes */
-.tile.big  { grid-column: span 2; grid-row: span 2; }
-.tile.wide { grid-column: span 2; }
-
-/* Tile contents */
-.tile-top { display: flex; align-items: flex-start; justify-content: space-between; }
-.tile-num {
-  font-family: var(--font-mono); font-size: 12px; font-weight: 600;
-  letter-spacing: 0.08em; color: var(--text-tertiary);
+.sync-badge {
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary);
+  white-space: nowrap;
 }
-.tile-emoji {
-  font-size: 26px; line-height: 1;
-  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--accent) 60%, transparent));
-}
-.tile-spacer { flex: 1; }
-.tile-title {
-  font-size: 22px; font-weight: 700; letter-spacing: -0.02em;
-  color: var(--text-primary); margin: 0 0 4px;
-}
-.tile.big .tile-title { font-size: 28px; }
-.tile-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.tile-sub {
-  font-size: 13px; color: var(--text-tertiary);
-}
-.tile-arrow {
-  font-size: 18px; color: var(--accent);
-  transition: transform 0.18s ease; flex-shrink: 0;
-}
-.tile:hover .tile-arrow { transform: translateX(4px); }
-
-/* ===== Responsive: collapse the bento on small screens ===== */
-@media (max-width: 720px) {
-  .bento { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 150px; }
-  .tile.big { grid-column: span 2; grid-row: span 1; }
-  .tile.big .tile-title { font-size: 22px; }
-}
-@media (max-width: 440px) {
-  body { padding: max(20px, env(safe-area-inset-top)) 14px 50px; }
-  .bento { grid-template-columns: 1fr; grid-auto-rows: 132px; }
-  .tile.big, .tile.wide { grid-column: span 1; }
-}
-
-/* ===== Header row + gear ===== */
-.hub-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
-.hub-head .dash-title { margin: 0; }
 .gear-btn {
-  width: 42px; height: 42px; flex-shrink: 0;
+  width: 38px; height: 38px; flex-shrink: 0;
   display: inline-flex; align-items: center; justify-content: center;
-  border-radius: 12px; border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(255,255,255,0.04); color: var(--text-secondary);
-  cursor: pointer; transition: background 0.15s, color 0.15s, transform 0.1s;
-  -webkit-tap-highlight-color: transparent;
+  border-radius: 10px; border: 1px solid rgba(255,255,255,0.09);
+  background: var(--card-bg); color: var(--text-secondary);
+  cursor: pointer; transition: background 0.15s, color 0.15s;
 }
 .gear-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
-.gear-btn:active { transform: scale(0.94) rotate(35deg); }
-.gear-btn svg { width: 22px; height: 22px; }
+.gear-btn svg { width: 18px; height: 18px; }
 
-/* ===== Settings modal ===== */
+/* ── Main grid ── */
+.cmd-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 14px;
+  align-items: start;
+}
+@media (max-width: 900px) { .cmd-grid { grid-template-columns: 1fr; } }
+
+/* ── Cards ── */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 14px;
+}
+.card:last-child { margin-bottom: 0; }
+.card-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text-tertiary); margin-bottom: 14px; display: block;
+}
+
+/* ── Sprint row ── */
+.sprint-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.sprint-card {
+  background: var(--card-bg); border: 1px solid var(--card-border);
+  border-radius: 14px; padding: 14px 16px;
+}
+.sprint-name { font-size: 11px; color: var(--text-tertiary); font-weight: 600; letter-spacing: 0.04em; margin-bottom: 8px; }
+.sprint-status {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 700; letter-spacing: 0.02em;
+  margin-bottom: 5px;
+}
+.sprint-status .dot { width: 7px; height: 7px; border-radius: 50%; }
+.sprint-status.on-track  { color: var(--green);  } .sprint-status.on-track  .dot { background: var(--green);  box-shadow: 0 0 8px var(--green); }
+.sprint-status.at-risk   { color: var(--amber);  } .sprint-status.at-risk   .dot { background: var(--amber);  box-shadow: 0 0 8px var(--amber); }
+.sprint-status.off-track { color: var(--red);    } .sprint-status.off-track .dot { background: var(--red);    box-shadow: 0 0 8px var(--red); }
+.sprint-detail { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+.sprint-deadline { font-size: 11px; color: var(--text-tertiary); font-family: var(--font-mono); }
+
+/* ── KPI row ── */
+.kpi-row { display: flex; gap: 0; margin-bottom: 18px; }
+.kpi { flex: 1; padding: 0 16px; }
+.kpi:first-child { padding-left: 0; }
+.kpi:last-child  { padding-right: 0; }
+.kpi-val { font-size: 32px; font-weight: 700; color: var(--text-primary); line-height: 1; font-variant-numeric: tabular-nums; }
+.kpi-sub { font-size: 10px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: var(--text-tertiary); margin: 4px 0 3px; }
+.kpi-detail { font-size: 12px; color: var(--text-secondary); }
+.kpi-divider { width: 1px; background: var(--card-border); align-self: stretch; margin: 2px 0; }
+
+/* ── Section sub-header ── */
+.section-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.section-badges { display: flex; gap: 12px; }
+.badge {
+  font-size: 11px; font-family: var(--font-mono); color: var(--text-tertiary);
+}
+.badge span { color: var(--text-primary); font-weight: 700; }
+
+/* ── Funnel ── */
+.funnel-title {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text-tertiary); margin: 16px 0 10px;
+}
+.funnel-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.funnel-side-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-tertiary); margin-bottom: 8px;
+}
+.funnel-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+.funnel-label { font-size: 11px; color: var(--text-secondary); width: 76px; flex-shrink: 0; }
+.funnel-bar-track { flex: 1; height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
+.funnel-bar-fill  { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+.funnel-num { font-size: 12px; font-weight: 700; color: var(--text-primary); width: 28px; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ── Bar chart ── */
+.bar-chart {
+  display: flex; align-items: flex-end; gap: 8px;
+  height: 90px; margin-bottom: 10px;
+}
+.bar-day { display: flex; flex-direction: column; align-items: center; flex: 1; gap: 0; }
+.bar-group { display: flex; align-items: flex-end; gap: 2px; height: 72px; }
+.bar-col { width: 10px; border-radius: 3px 3px 0 0; min-height: 2px; transition: height 0.4s ease; }
+.bar-col.anish    { background: var(--green); }
+.bar-col.michelle { background: var(--blue); }
+.bar-nums { font-size: 9px; color: var(--text-tertiary); text-align: center; margin-top: 3px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bar-lbl  { font-size: 10px; color: var(--text-tertiary); margin-top: 2px; }
+.chart-legend {
+  display: flex; gap: 14px; margin-bottom: 12px;
+}
+.legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-secondary); }
+.legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+
+/* ── Rolling trend ── */
+.trend-section { margin-bottom: 14px; }
+.trend-label { font-size: 10px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 8px; }
+.trend-bars { display: flex; align-items: flex-end; gap: 6px; height: 50px; }
+.trend-bar-wrap { display: flex; flex-direction: column; align-items: center; flex: 1; }
+.trend-bar {
+  width: 100%; border-radius: 3px 3px 0 0; min-height: 2px;
+  background: rgba(255,255,255,0.12); transition: height 0.4s ease;
+}
+.trend-bar.current { background: var(--green); }
+.trend-week-lbl { font-size: 9px; color: var(--text-tertiary); margin-top: 4px; text-align: center; }
+.trend-val { font-size: 9px; color: var(--text-secondary); margin-bottom: 2px; font-variant-numeric: tabular-nums; }
+
+/* ── Kanban / tasks ── */
+.task-list { list-style: none; margin-bottom: 10px; }
+.task-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.task-item:last-child { border-bottom: 0; }
+.task-check {
+  width: 16px; height: 16px; flex-shrink: 0; cursor: pointer;
+  border-radius: 4px; border: 1.5px solid rgba(255,255,255,0.18);
+  background: transparent; display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+}
+.task-check.done { background: var(--green); border-color: var(--green); }
+.task-check.done::after { content: '✓'; font-size: 10px; color: #050506; font-weight: 800; }
+.task-text {
+  flex: 1; font-size: 13px; color: var(--text-primary); cursor: default;
+  transition: color 0.2s, text-decoration 0.2s;
+}
+.task-text.done { color: var(--text-tertiary); text-decoration: line-through; }
+.task-del {
+  width: 18px; height: 18px; border: 0; background: transparent;
+  color: var(--text-tertiary); cursor: pointer; font-size: 16px; line-height: 1;
+  opacity: 0; transition: opacity 0.15s;
+}
+.task-item:hover .task-del { opacity: 1; }
+.add-task-row { display: flex; gap: 6px; }
+.task-input {
+  flex: 1; min-width: 0; background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08); border-radius: 9px;
+  padding: 8px 12px; color: var(--text-primary); font-family: inherit;
+  font-size: 13px; outline: none; transition: border-color 0.2s;
+}
+.task-input:focus { border-color: rgba(255,255,255,0.22); }
+.task-input::placeholder { color: var(--text-tertiary); }
+.add-btn {
+  width: 34px; height: 34px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.06); color: var(--text-primary);
+  font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.add-btn:hover { background: rgba(255,255,255,0.12); }
+
+/* ── Deadlines ── */
+.deadline-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 13px;
+}
+.deadline-row:last-child { border-bottom: 0; }
+.deadline-lbl { color: var(--text-secondary); }
+.deadline-days {
+  font-family: var(--font-mono); font-size: 12px; color: var(--text-primary); font-weight: 700;
+}
+
+/* ── Sequence health table ── */
+.seq-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.seq-table th {
+  text-align: left; font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-tertiary); padding-bottom: 8px;
+}
+.seq-table th:not(:first-child) { text-align: center; }
+.seq-table td { padding: 6px 0; color: var(--text-secondary); }
+.seq-table td:not(:first-child) { text-align: center; }
+.seq-table tr + tr td { border-top: 1px solid rgba(255,255,255,0.04); }
+.seq-input {
+  width: 60px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px; padding: 4px 8px; color: var(--text-primary); font-family: var(--font-mono);
+  font-size: 12px; text-align: center; outline: none; transition: border-color 0.2s;
+}
+.seq-input:focus { border-color: rgba(255,255,255,0.22); }
+.seq-input::placeholder { color: var(--text-tertiary); }
+
+/* ── Error banner ── */
+.err-banner {
+  display: none; background: rgba(248,113,113,0.10);
+  border: 1px solid rgba(248,113,113,0.25);
+  border-radius: 12px; padding: 12px 16px; margin-bottom: 14px;
+  font-size: 12px; color: var(--red);
+}
+.err-banner.show { display: block; }
+.err-title { font-weight: 700; margin-bottom: 4px; }
+
+/* ── Settings modal (keep from original) ── */
 .modal-bg {
   position: fixed; inset: 0; z-index: 120; display: none;
   align-items: center; justify-content: center; padding: 20px;
-  background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(10px);
 }
 .modal-bg.show { display: flex; }
 .modal {
@@ -165,8 +298,8 @@ body::after {
   border-radius: 18px; padding: 22px; box-shadow: 0 24px 70px rgba(0,0,0,0.6);
 }
 .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
-.modal-title { font-size: 18px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.01em; }
-.modal-close { border: 0; background: transparent; color: var(--text-tertiary); font-size: 26px; line-height: 1; cursor: pointer; padding: 0 4px; }
+.modal-title { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+.modal-close { border: 0; background: transparent; color: var(--text-tertiary); font-size: 26px; cursor: pointer; }
 .modal-close:hover { color: var(--text-primary); }
 .field { margin-bottom: 14px; }
 .field-label { font-size: 11px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 7px; display: block; }
@@ -186,21 +319,20 @@ body::after {
   background: linear-gradient(180deg,#FFFFFF,#E8E5DD); color: #0A0A0B;
   font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 22px rgba(0,0,0,0.25);
-  transition: filter 0.15s, transform 0.1s;
+  transition: filter 0.15s;
 }
 .set-save:hover { filter: brightness(1.05); }
-.set-save:active { transform: translateY(1px); }
-.set-status { text-align: center; font-size: 12px; color: var(--success); min-height: 16px; margin-top: 8px; }
+.set-status { text-align: center; font-size: 12px; color: var(--green); min-height: 16px; margin-top: 8px; }
 .section-divider { height: 1px; background: rgba(255,255,255,0.07); margin: 20px 0 14px; }
 .whoop-box { margin-top: 8px; padding: 16px; border-radius: 14px; background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06); }
 .whoop-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .whoop-status { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--text-primary); }
 .whoop-status .dot { width: 8px; height: 8px; border-radius: 50%; background: #76746E; }
-.whoop-status.on .dot { background: #6BE3A4; box-shadow: 0 0 8px rgba(107,227,164,0.7); }
+.whoop-status.on .dot { background: var(--green); box-shadow: 0 0 8px rgba(107,227,164,0.7); }
 .whoop-sync { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); text-align: right; }
 .whoop-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-top: 14px; }
 .whoop-stat { text-align: center; }
-.whoop-stat .v { font-size: 20px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1; }
+.whoop-stat .v { font-size: 20px; font-weight: 700; color: var(--text-primary); line-height: 1; }
 .whoop-stat .l { font-size: 9.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-top: 5px; }
 .whoop-btn { width: 100%; margin-top: 14px; padding: 11px; border: 1px solid rgba(255,255,255,0.12); border-radius: 11px; background: transparent; color: var(--text-secondary); font-family: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: background 0.15s, color 0.15s; }
 .whoop-btn:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); }
@@ -209,141 +341,215 @@ body::after {
 <body>
 <div class="page">
 
+  <!-- Header -->
   <div class="hub-head">
     <h1 class="dash-title">Jarvis</h1>
-    <button class="gear-btn" id="settingsOpen" type="button" aria-label="Settings">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-      </svg>
-    </button>
+    <nav class="mini-nav">
+      <a href="sales.html">Sales</a>
+      <a href="gym.html">Gym</a>
+      <a href="health.html">Health</a>
+      <a href="nova-lite.html">Nova</a>
+      <a href="finance.html">Finance</a>
+    </nav>
+    <div class="head-right">
+      <span class="sync-badge" id="syncBadge">loading…</span>
+      <button class="gear-btn" id="settingsOpen" type="button" aria-label="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+    </div>
   </div>
 
-  <div class="bento">
+  <!-- Error banner -->
+  <div class="err-banner" id="errBanner">
+    <div class="err-title" id="errTitle">HubSpot sync failed</div>
+    <div id="errDetail"></div>
+  </div>
 
-    <!-- Big tile -->
-    <a class="tile big" href="main.html" style="--accent:#6BE3A4">
-      <div class="tile-top">
-        <span class="tile-num">·01</span>
-        <span class="tile-emoji">🏠</span>
-      </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Main</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Goals & daily plan</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
+  <!-- Sprint Goals -->
+  <div class="sprint-row">
+    <div class="sprint-card">
+      <div class="sprint-name">Michelle · 60 dials/day</div>
+      <div class="sprint-status off-track" id="sprintDialsStatus"><span class="dot"></span><span id="sprintDialsLabel">—</span></div>
+      <div class="sprint-detail" id="sprintDialsDetail">loading…</div>
+      <div class="sprint-deadline">Deadline Jun 30 · <span id="dlDials">—</span> days</div>
+    </div>
+    <div class="sprint-card">
+      <div class="sprint-name">Team · 10 meetings/wk</div>
+      <div class="sprint-status off-track" id="sprintMtgStatus"><span class="dot"></span><span id="sprintMtgLabel">—</span></div>
+      <div class="sprint-detail" id="sprintMtgDetail">loading…</div>
+      <div class="sprint-deadline">Deadline Jul 2 · <span id="dlMtg">—</span> days</div>
+    </div>
+  </div>
 
-    <!-- Wide tile -->
-    <a class="tile wide" href="gym.html" style="--accent:#7DD3FC">
-      <div class="tile-top">
-        <span class="tile-num">·02</span>
-        <span class="tile-emoji">💪</span>
-      </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Fitness</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Workouts, splits, sessions</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
+  <!-- Main 2-col grid -->
+  <div class="cmd-grid">
 
-    <!-- Small tile -->
-    <a class="tile" href="health.html" style="--accent:#A7F3D0">
-      <div class="tile-top">
-        <span class="tile-num">·03</span>
-        <span class="tile-emoji">💊</span>
-      </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Health</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Supplements & vitals</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
+    <!-- LEFT: Metrics -->
+    <div>
 
-    <!-- Small tile -->
-    <a class="tile" href="po-water.html" style="--accent:#60A5FA">
-      <div class="tile-top">
-        <span class="tile-num">·04</span>
-        <span class="tile-emoji">💧</span>
-      </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Water</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Hydration</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
+      <!-- Monthly Sales -->
+      <div class="card">
+        <div class="section-head">
+          <span class="card-label" id="monthLabel">Monthly</span>
+          <div class="section-badges">
+            <span class="badge">Goal <span>10/wk</span></span>
+          </div>
+        </div>
 
-    <!-- Wide tile -->
-    <a class="tile wide" href="finance.html" style="--accent:#F2C063">
-      <div class="tile-top">
-        <span class="tile-num">·05</span>
-        <span class="tile-emoji">📊</span>
-      </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Finance</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Net worth & spending</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
+        <div class="kpi-row">
+          <div class="kpi">
+            <div class="kpi-val" id="kpiAppts">—</div>
+            <div class="kpi-sub">Appointments</div>
+            <div class="kpi-detail"><span id="kpiApptA">—</span> Anish · <span id="kpiApptM">—</span> Michelle</div>
+          </div>
+          <div class="kpi-divider"></div>
+          <div class="kpi">
+            <div class="kpi-val" id="kpiMqls">—</div>
+            <div class="kpi-sub">MQLs</div>
+            <div class="kpi-detail">Pre-assess · overview</div>
+          </div>
+          <div class="kpi-divider"></div>
+          <div class="kpi">
+            <div class="kpi-val" id="kpiSqls">—</div>
+            <div class="kpi-sub">SQLs</div>
+            <div class="kpi-detail">Discovery+</div>
+          </div>
+        </div>
 
-    <!-- Small tile -->
-    <a class="tile" href="caffeine.html" style="--accent:#C9A36B">
-      <div class="tile-top">
-        <span class="tile-num">·06</span>
-        <span class="tile-emoji">☕</span>
+        <div class="funnel-title">Monthly Call Funnel</div>
+        <div class="funnel-cols">
+          <div>
+            <div class="funnel-side-label">Anish</div>
+            <div id="mFunnelAnish"></div>
+          </div>
+          <div>
+            <div class="funnel-side-label">Michelle</div>
+            <div id="mFunnelMichelle"></div>
+          </div>
+        </div>
       </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Caffeine</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Intake & timing</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
 
-    <!-- Wide tile -->
-    <a class="tile wide" href="nova-lite.html" style="--accent:#A78BFA">
-      <div class="tile-top">
-        <span class="tile-num">·07</span>
-        <span class="tile-emoji">🧠</span>
-      </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Nova</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Your AI mentor</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
+      <!-- Weekly Activity -->
+      <div class="card">
+        <div class="section-head">
+          <span class="card-label" id="weekLabel">Week</span>
+          <div class="section-badges">
+            <span class="badge" id="wkAvgBadge">avg <span id="wkAvg">—</span>/day</span>
+            <span class="badge" id="wkConnBadge"><span id="wkConn">—</span> connects</span>
+          </div>
+        </div>
 
-    <!-- Wide tile -->
-    <a class="tile wide" href="sales.html" style="--accent:#FB923C">
-      <div class="tile-top">
-        <span class="tile-num">·08</span>
-        <span class="tile-emoji">📞</span>
-      </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Sales</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Meetings, MQLs & call activity</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
+        <div class="chart-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Anish</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div>Michelle</div>
+        </div>
+        <div class="bar-chart" id="barChart"></div>
 
+        <div class="funnel-title">Weekly Call Funnel</div>
+        <div class="funnel-cols">
+          <div>
+            <div class="funnel-side-label">Anish</div>
+            <div id="wFunnelAnish"></div>
+          </div>
+          <div>
+            <div class="funnel-side-label">Michelle</div>
+            <div id="wFunnelMichelle"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rolling Trend -->
+      <div class="card">
+        <span class="card-label">4-Week Rolling Trend</span>
+        <div class="trend-section">
+          <div class="trend-label">Meetings booked / wk</div>
+          <div class="trend-bars" id="trendMtg"></div>
+        </div>
+        <div class="trend-section" style="margin-bottom:0">
+          <div class="trend-label">Total dials / wk</div>
+          <div class="trend-bars" id="trendDials"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: Planning -->
+    <div>
+
+      <!-- Today's Focus -->
+      <div class="card">
+        <span class="card-label">Today's Focus</span>
+        <ul class="task-list" id="todayList"></ul>
+        <div class="add-task-row">
+          <input class="task-input" id="todayInput" placeholder="Add commitment…" />
+          <button class="add-btn" id="todayAdd">+</button>
+        </div>
+      </div>
+
+      <!-- Tomorrow -->
+      <div class="card">
+        <span class="card-label">Tomorrow</span>
+        <ul class="task-list" id="tomorrowList"></ul>
+        <div class="add-task-row">
+          <input class="task-input" id="tomorrowInput" placeholder="Plan ahead…" />
+          <button class="add-btn" id="tomorrowAdd">+</button>
+        </div>
+      </div>
+
+      <!-- Sequence & List Health -->
+      <div class="card">
+        <span class="card-label">Sequence &amp; List Health</span>
+        <table class="seq-table">
+          <thead>
+            <tr><th></th><th>Anish</th><th>Michelle</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Enrolled in sequences</td>
+              <td><input class="seq-input" id="seqAE" placeholder="—" /></td>
+              <td><input class="seq-input" id="seqME" placeholder="—" /></td>
+            </tr>
+            <tr>
+              <td>P1 contacts available</td>
+              <td><input class="seq-input" id="seqAP" placeholder="—" /></td>
+              <td><input class="seq-input" id="seqMP" placeholder="—" /></td>
+            </tr>
+            <tr>
+              <td>Added this week</td>
+              <td><input class="seq-input" id="seqAW" placeholder="—" /></td>
+              <td><input class="seq-input" id="seqMW" placeholder="—" /></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Deadlines -->
+      <div class="card">
+        <span class="card-label">Deadlines</span>
+        <div class="deadline-row">
+          <span class="deadline-lbl">Machine: Michelle 60 dials/day</span>
+          <span class="deadline-days" id="dlDialsFull">—</span>
+        </div>
+        <div class="deadline-row">
+          <span class="deadline-lbl">Outcome: 10 meetings/wk</span>
+          <span class="deadline-days" id="dlMtgFull">—</span>
+        </div>
+      </div>
+
+    </div>
   </div>
 </div>
 
-<!-- ===== Settings / Your Data ===== -->
+<!-- Settings modal -->
 <div class="modal-bg" id="settingsBg">
-  <div class="modal" role="dialog" aria-label="Your data">
+  <div class="modal" role="dialog" aria-label="Settings">
     <div class="modal-head">
       <span class="modal-title">Your Data</span>
-      <button class="modal-close" id="settingsClose" type="button" aria-label="Close">×</button>
+      <button class="modal-close" id="settingsClose" type="button">×</button>
     </div>
-
     <div class="field">
       <label class="field-label">Height</label>
       <div class="field-row">
@@ -355,7 +561,6 @@ body::after {
         </div>
       </div>
     </div>
-
     <div class="field">
       <label class="field-label">Weight</label>
       <div class="field-row">
@@ -366,12 +571,10 @@ body::after {
         </div>
       </div>
     </div>
-
     <div class="field">
       <label class="field-label">Age</label>
       <input class="set-input" id="age" type="number" min="0" inputmode="numeric" placeholder="years">
     </div>
-
     <div class="field">
       <label class="field-label">Sex</label>
       <div class="seg" id="sexSeg" style="width:100%;display:flex">
@@ -379,17 +582,13 @@ body::after {
         <button type="button" data-s="f" style="flex:1">Female</button>
       </div>
     </div>
-
     <div class="field">
       <label class="field-label">Active hours / week</label>
       <input class="set-input" id="activity" type="number" min="0" inputmode="decimal" placeholder="e.g. 5">
     </div>
-
     <button class="set-save" id="settingsSave" type="button">Save</button>
     <div class="set-status" id="settingsStatus"></div>
-
     <div class="section-divider"></div>
-
     <label class="field-label">WHOOP</label>
     <div class="whoop-box">
       <div class="whoop-row">
@@ -408,177 +607,436 @@ body::after {
 
 <script>
 (function () {
-  'use strict';
-  const $ = (id) => document.getElementById(id);
-  const WATER_KEY = 'po_water_v1';
-  const WHOOP_KEY = 'whoop_tokens_v1';
-  const SYNC_KEY  = 'whoop_last_sync';
+'use strict';
 
-  function loadJSON(k, f) { try { return JSON.parse(localStorage.getItem(k)) || f; } catch (e) { return f; } }
-  function saveJSON(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
+// ── Helpers ──────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const setText = (id, v) => { const el = $(id); if (el) el.textContent = String(v ?? '—'); };
+const loadJSON = (k, f) => { try { return JSON.parse(localStorage.getItem(k)) || f; } catch { return f; } };
+const saveJSON = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 
-  // Mirror of topbar.js defaultWaterState so we never clobber the water tracker.
-  function defaultWater() {
-    return { unit:'bottle', bottleMl:500, glassMl:250, weightUnit:'kg',
-      profile:{ weightKg:75, age:25, sex:'m', activityHrsPerWeek:5 },
-      caffeineMgPerDay:200, substances:[], logs:{} };
+function daysUntil(isoDate) {
+  const target = new Date(isoDate + 'T00:00:00');
+  const diff = Math.ceil((target - new Date()) / 86400000);
+  return diff > 0 ? diff : 0;
+}
+function monthName() {
+  return new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+}
+function weekRange() {
+  const n = new Date(), dow = n.getDay();
+  const mon = new Date(n); mon.setDate(n.getDate() - (dow === 0 ? 6 : dow - 1));
+  const fri = new Date(mon); fri.setDate(mon.getDate() + 4);
+  const fmt = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return fmt(mon) + ' – ' + fmt(fri);
+}
+function isoWeekStart() {
+  const n = new Date(), dow = n.getDay();
+  const mon = new Date(n); mon.setDate(n.getDate() - (dow === 0 ? 6 : dow - 1));
+  return mon.toISOString().slice(0, 10);
+}
+
+// ── Deadlines ─────────────────────────────────────────────────────
+const DL_DIALS = '2026-06-30';
+const DL_MTG   = '2026-07-02';
+const MICHELLE_CALL_FLOOR = '2026-06-10';
+
+function renderDeadlines() {
+  const dd = daysUntil(DL_DIALS), dm = daysUntil(DL_MTG);
+  setText('dlDials',    dd + ' days');
+  setText('dlMtg',      dm + ' days');
+  setText('dlDialsFull', dd + ' days');
+  setText('dlMtgFull',   dm + ' days');
+}
+renderDeadlines();
+
+// ── Sprint status ─────────────────────────────────────────────────
+function setSprintStatus(elId, labelId, detailId, cls, label, detail) {
+  const el = $(elId);
+  el.className = 'sprint-status ' + cls;
+  setText(labelId, label);
+  setText(detailId, detail);
+}
+
+function updateSprints(data) {
+  if (!data) return;
+
+  // Michelle dials sprint: 60/day by Jun 30
+  const mDials = data.monthly.michelle.dials;
+  const floorDate = new Date(MICHELLE_CALL_FLOOR + 'T00:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const daysActive = Math.max(1, Math.round((today - floorDate) / 86400000));
+  const avg = mDials / daysActive;
+  let dialsCls, dialsLabel, dialsDetail;
+  if (avg >= 60)      { dialsCls = 'on-track';  dialsLabel = 'ON TRACK';  }
+  else if (avg >= 45) { dialsCls = 'at-risk';   dialsLabel = 'AT RISK';   }
+  else                { dialsCls = 'off-track';  dialsLabel = 'OFF TRACK'; }
+  dialsDetail = `Avg ${avg.toFixed(0)}/day (${mDials} total · ${daysActive} days)`;
+  setSprintStatus('sprintDialsStatus', 'sprintDialsLabel', 'sprintDialsDetail', dialsCls, dialsLabel, dialsDetail);
+
+  // Meetings sprint: 10/wk by Jul 2
+  const wm = data.weekly.weekMeetings;
+  const dow = new Date().getDay();
+  const daysElapsed = Math.max(1, dow === 0 ? 5 : Math.min(dow, 5));
+  const proj = Math.round((wm / daysElapsed) * 5);
+  let mtgCls, mtgLabel, mtgDetail;
+  if (wm >= 8 || proj >= 10)       { mtgCls = 'on-track';  mtgLabel = 'ON TRACK';  }
+  else if (wm >= 5 || proj >= 7)   { mtgCls = 'at-risk';   mtgLabel = 'AT RISK';   }
+  else                              { mtgCls = 'off-track';  mtgLabel = 'OFF TRACK'; }
+  mtgDetail = `${wm}/10 this week · proj. ${proj}/wk`;
+  setSprintStatus('sprintMtgStatus', 'sprintMtgLabel', 'sprintMtgDetail', mtgCls, mtgLabel, mtgDetail);
+}
+
+// ── Funnel renderer ───────────────────────────────────────────────
+function renderFunnel(containerId, f) {
+  const stages = [
+    { label: 'Connected',    val: f.connects,   color: 'var(--green)'  },
+    { label: 'Pitched',      val: f.pitched,    color: 'var(--amber)'  },
+    { label: 'Past Pitch',   val: f.pastPitch,  color: 'var(--orange)' },
+    { label: 'Meeting Set',  val: f.meetingSet, color: 'var(--red)'    },
+  ];
+  const baseline = f.connects || 1;
+  $(containerId).innerHTML = stages.map(s => `
+    <div class="funnel-row">
+      <span class="funnel-label">${s.label}</span>
+      <div class="funnel-bar-track">
+        <div class="funnel-bar-fill" style="width:${Math.min(100,Math.round(s.val/baseline*100))}%;background:${s.color}"></div>
+      </div>
+      <span class="funnel-num">${s.val}</span>
+    </div>`).join('');
+}
+
+// ── Bar chart renderer ────────────────────────────────────────────
+function renderBarChart(byDay) {
+  const DAYS = ['Mon','Tue','Wed','Thu','Fri'];
+  const maxVal = Math.max(1, ...DAYS.flatMap(d => [byDay.Anish[d], byDay.Michelle[d]]));
+  const H = 72;
+  $('barChart').innerHTML = DAYS.map(day => {
+    const a = byDay.Anish[day], m = byDay.Michelle[day];
+    const aH = Math.max(2, Math.round(a / maxVal * H));
+    const mH = Math.max(2, Math.round(m / maxVal * H));
+    return `<div class="bar-day">
+      <div class="bar-group">
+        <div class="bar-col anish"    style="height:${aH}px" title="Anish ${a}"></div>
+        <div class="bar-col michelle" style="height:${mH}px" title="Michelle ${m}"></div>
+      </div>
+      <div class="bar-nums">${a}/${m}</div>
+      <div class="bar-lbl">${day}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Monthly render ────────────────────────────────────────────────
+function renderMonthly(d) {
+  setText('monthLabel', monthName());
+  setText('kpiAppts', d.appts);
+  setText('kpiApptA', d.apptAnish);
+  setText('kpiApptM', d.apptMichelle);
+  setText('kpiMqls',  d.mqls);
+  setText('kpiSqls',  d.sqls);
+  renderFunnel('mFunnelAnish',    d.anish);
+  renderFunnel('mFunnelMichelle', d.michelle);
+}
+
+// ── Weekly render ─────────────────────────────────────────────────
+function renderWeekly(d) {
+  setText('weekLabel', weekRange());
+  const totalAvg = +((d.anish.avgDials + d.michelle.avgDials)).toFixed(1);
+  const totalConn = d.anish.connects + d.michelle.connects;
+  setText('wkAvg',  totalAvg);
+  setText('wkConn', totalConn);
+  renderBarChart(d.byDay);
+  renderFunnel('wFunnelAnish',    d.anish);
+  renderFunnel('wFunnelMichelle', d.michelle);
+}
+
+// ── Rolling trend ─────────────────────────────────────────────────
+const TREND_KEY = 'jarvis_trend_v1';
+
+function saveTrend(data) {
+  const ws = isoWeekStart();
+  const history = loadJSON(TREND_KEY, []);
+  const idx = history.findIndex(e => e.week === ws);
+  const entry = {
+    week:     ws,
+    label:    new Date(ws + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    meetings: data.weekly.weekMeetings,
+    dials:    data.weekly.anish.dials + data.weekly.michelle.dials,
+  };
+  if (idx >= 0) history[idx] = entry;
+  else history.push(entry);
+  // keep only last 8 weeks
+  const trimmed = history.sort((a,b) => a.week.localeCompare(b.week)).slice(-8);
+  saveJSON(TREND_KEY, trimmed);
+  renderTrend(trimmed);
+}
+
+function renderTrend(history) {
+  if (!history || !history.length) {
+    $('trendMtg').innerHTML   = '<span style="font-size:11px;color:var(--text-tertiary)">No data yet — auto-builds each sync</span>';
+    $('trendDials').innerHTML = '';
+    return;
+  }
+  const last4 = history.slice(-4);
+  const ws = isoWeekStart();
+
+  function barsHTML(key, maxPad) {
+    const maxVal = Math.max(1, maxPad, ...last4.map(e => e[key]));
+    return last4.map(e => {
+      const pct = Math.max(2, Math.round(e[key] / maxVal * 100));
+      const isCurrent = e.week === ws;
+      return `<div class="trend-bar-wrap">
+        <div class="trend-val">${e[key]}</div>
+        <div class="trend-bar ${isCurrent ? 'current' : ''}" style="height:${pct}%"></div>
+        <div class="trend-week-lbl">${e.label}</div>
+      </div>`;
+    }).join('');
   }
 
-  /* ---------- unit state ---------- */
-  let heightUnit = 'cm';   // 'cm' | 'ft'
-  let weightUnit = 'kg';   // 'kg' | 'lb'
-  let sex = 'm';
+  $('trendMtg').innerHTML   = barsHTML('meetings', 10);
+  $('trendDials').innerHTML = barsHTML('dials',    100);
+}
 
-  function setHeightUnit(u) {
-    heightUnit = u;
-    $('heightUnitSeg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.u === u));
-    const a = $('heightA'), b = $('heightB');
-    if (u === 'cm') { a.placeholder = 'cm'; b.style.display = 'none'; }
-    else { a.placeholder = 'ft'; b.placeholder = 'in'; b.style.display = ''; }
-  }
-  function setWeightUnit(u) {
-    weightUnit = u;
-    $('weightUnitSeg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.u === u));
-  }
-  function setSex(s) {
-    sex = s;
-    $('sexSeg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.s === s));
-  }
+// init trend from localStorage
+renderTrend(loadJSON(TREND_KEY, []));
 
-  function getHeightCm() {
-    if (heightUnit === 'cm') { const v = parseFloat($('heightA').value); return v > 0 ? v : null; }
-    const ft = parseFloat($('heightA').value) || 0;
-    const inch = parseFloat($('heightB').value) || 0;
-    const cm = ft * 30.48 + inch * 2.54;
-    return cm > 0 ? Math.round(cm) : null;
-  }
-  function fillHeight(cm) {
-    if (!cm) { $('heightA').value = ''; $('heightB').value = ''; return; }
-    if (heightUnit === 'cm') { $('heightA').value = Math.round(cm); }
-    else { const totalIn = cm / 2.54; $('heightA').value = Math.floor(totalIn / 12); $('heightB').value = Math.round(totalIn % 12); }
-  }
+// ── HubSpot sync ──────────────────────────────────────────────────
+let syncing = false, countdown = 300, hsData = null;
+const POLL_SEC = 300;
 
-  /* ---------- load existing profile into the form ---------- */
-  function populate() {
-    const w = loadJSON(WATER_KEY, defaultWater());
-    const p = w.profile || {};
-    setWeightUnit(w.weightUnit === 'lb' ? 'lb' : 'kg');
-    setHeightUnit(p.heightUnit === 'ft' ? 'ft' : 'cm');
-    setSex(p.sex === 'f' ? 'f' : 'm');
-    fillHeight(p.heightCm || null);
-    if (p.weightKg) $('weight').value = weightUnit === 'lb' ? Math.round(p.weightKg * 2.20462) : Math.round(p.weightKg);
-    else $('weight').value = '';
-    $('age').value = p.age || '';
-    $('activity').value = (p.activityHrsPerWeek != null ? p.activityHrsPerWeek : '');
-  }
+async function loadAll() {
+  if (syncing) return;
+  syncing = true;
+  setText('syncBadge', 'syncing…');
+  $('errBanner').classList.remove('show');
 
-  /* ---------- save back into po_water_v1 (merge, never overwrite logs) ---------- */
-  function save() {
-    const w = loadJSON(WATER_KEY, defaultWater());
-    w.profile = w.profile || {};
-    const cm = getHeightCm();
-    if (cm) { w.profile.heightCm = cm; w.profile.heightUnit = heightUnit; }
-    const wv = parseFloat($('weight').value);
-    if (wv > 0) { w.profile.weightKg = weightUnit === 'lb' ? +(wv / 2.20462).toFixed(1) : wv; w.weightUnit = weightUnit; }
-    const age = parseInt($('age').value, 10); if (age > 0) w.profile.age = age;
-    w.profile.sex = sex;
-    const act = parseFloat($('activity').value); if (act >= 0 && !isNaN(act)) w.profile.activityHrsPerWeek = act;
-    saveJSON(WATER_KEY, w);
-    const s = $('settingsStatus'); s.textContent = 'Saved ✓';
-    setTimeout(() => { s.textContent = ''; }, 1800);
-  }
-
-  /* ---------- open / close ---------- */
-  function open() { populate(); renderWhoop(); $('settingsBg').classList.add('show'); syncWhoop(); }
-  function close() { $('settingsBg').classList.remove('show'); }
-  $('settingsOpen').addEventListener('click', open);
-  $('settingsClose').addEventListener('click', close);
-  $('settingsBg').addEventListener('click', (e) => { if (e.target === $('settingsBg')) close(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
-  $('settingsSave').addEventListener('click', save);
-  $('heightUnitSeg').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
-    const cm = getHeightCm(); setHeightUnit(b.dataset.u); fillHeight(cm);
-  }));
-  $('weightUnitSeg').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
-    const v = parseFloat($('weight').value);
-    const kg = v > 0 ? (weightUnit === 'lb' ? v / 2.20462 : v) : null;
-    setWeightUnit(b.dataset.u);
-    if (kg) $('weight').value = weightUnit === 'lb' ? Math.round(kg * 2.20462) : Math.round(kg);
-  }));
-  $('sexSeg').querySelectorAll('button').forEach(b => b.addEventListener('click', () => setSex(b.dataset.s)));
-
-  /* ---------- WHOOP ---------- */
-  let whStats = null;
-  function relTime(ts) {
-    if (!ts) return 'never';
-    const s = Math.floor((Date.now() - ts) / 1000);
-    if (s < 60) return 'just now';
-    if (s < 3600) return Math.floor(s/60) + ' min ago';
-    if (s < 86400) return Math.floor(s/3600) + ' h ago';
-    return Math.floor(s/86400) + ' d ago';
-  }
-  function renderWhoop(err) {
-    const t = loadJSON(WHOOP_KEY, null);
-    const statusEl = $('whStatus'), txt = $('whStatusText'), syncEl = $('whSync'), action = $('whAction');
-    if (!t || !t.access) {
-      statusEl.classList.remove('on'); txt.textContent = 'Not connected';
-      syncEl.textContent = ''; $('whStats').style.display = 'none';
-      action.textContent = 'Connect on Health page';
-      return;
-    }
-    statusEl.classList.add('on'); txt.textContent = err ? 'Connected (sync failed)' : 'Connected';
-    const last = Number(localStorage.getItem(SYNC_KEY)) || 0;
-    syncEl.textContent = 'Last synced ' + relTime(last);
-    action.textContent = 'Sync now';
-    if (whStats) {
-      $('whStats').style.display = '';
-      $('whRec').textContent   = whStats.rec   != null ? whStats.rec + '%'  : '—';
-      $('whSleep').textContent = whStats.sleep != null ? whStats.sleep + '%' : '—';
-      $('whRhr').textContent   = whStats.rhr   != null ? whStats.rhr         : '—';
-    }
-  }
-  async function wRefresh(t) {
-    if (!t.refresh) return null;
-    try {
-      const r = await fetch('/api/whoop-refresh', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ refresh_token: t.refresh }) });
+  try {
+    const data = await fetch('/api/hubspot?type=all').then(async r => {
       const j = await r.json();
-      if (j.access_token) { const n = { access:j.access_token, refresh:j.refresh_token||t.refresh, expires:Date.now()+(j.expires_in||3500)*1000 }; saveJSON(WHOOP_KEY, n); return n; }
-    } catch (e) {}
-    return null;
+      if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+      return j;
+    });
+    hsData = data;
+    renderMonthly(data.monthly);
+    renderWeekly(data.weekly);
+    updateSprints(data);
+    saveTrend(data);
+    const t = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    setText('syncBadge', 'Synced ' + t);
+    countdown = POLL_SEC;
+  } catch (e) {
+    $('errBanner').classList.add('show');
+    setText('errTitle', 'HubSpot sync failed');
+    setText('errDetail', e.message || String(e));
+    const t = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    setText('syncBadge', 'Failed ' + t);
   }
-  async function wFetch(path, t) {
-    const [p, qs] = path.split('?');
-    const params = new URLSearchParams(qs || ''); params.set('path', p);
-    const r = await fetch('/api/whoop-data?' + params.toString(), { headers: { 'Authorization': 'Bearer ' + t.access, 'Accept':'application/json' } });
-    if (r.status === 401) { const n = await wRefresh(t); if (n) return wFetch(path, n); throw new Error('unauthorized'); }
-    if (!r.ok) throw new Error('whoop ' + r.status);
-    return r.json();
-  }
-  async function syncWhoop() {
-    let t = loadJSON(WHOOP_KEY, null);
-    if (!t || !t.access) return;
-    if (t.expires && Date.now() > t.expires - 60000) { const n = await wRefresh(t); if (n) t = n; }
-    try {
-      const [rec, sleep] = await Promise.all([
-        wFetch('/recovery?limit=1', t).catch(()=>null),
-        wFetch('/activity/sleep?limit=1', t).catch(()=>null),
-      ]);
-      const r0 = rec && rec.records && rec.records[0];
-      const s0 = sleep && sleep.records && sleep.records[0];
-      whStats = {
-        rec:   r0 && r0.score && r0.score.recovery_score != null ? Math.round(r0.score.recovery_score) : null,
-        rhr:   r0 && r0.score && r0.score.resting_heart_rate != null ? Math.round(r0.score.resting_heart_rate) : null,
-        sleep: s0 && s0.score && s0.score.sleep_performance_percentage != null ? Math.round(s0.score.sleep_performance_percentage) : null,
-      };
-      localStorage.setItem(SYNC_KEY, String(Date.now()));
-      renderWhoop();
-    } catch (e) { renderWhoop(e); }
-  }
-  $('whAction').addEventListener('click', () => {
-    const t = loadJSON(WHOOP_KEY, null);
-    if (!t || !t.access) { window.location.href = 'health.html'; return; }
-    $('whAction').textContent = 'Syncing…'; syncWhoop();
+  syncing = false;
+}
+
+setInterval(() => {
+  countdown--;
+  if (countdown <= 0) { countdown = POLL_SEC; loadAll(); }
+}, 1000);
+
+loadAll();
+
+// ── Kanban ────────────────────────────────────────────────────────
+const TODAY_KEY    = 'jarvis_today_v1';
+const TOMORROW_KEY = 'jarvis_tomorrow_v1';
+
+function renderTasks(listId, key) {
+  const tasks = loadJSON(key, []);
+  const ul = $(listId);
+  ul.innerHTML = '';
+  tasks.forEach((t, i) => {
+    const li = document.createElement('li');
+    li.className = 'task-item';
+    li.innerHTML = `
+      <div class="task-check ${t.done ? 'done' : ''}" data-i="${i}" data-key="${key}"></div>
+      <span class="task-text ${t.done ? 'done' : ''}">${t.text}</span>
+      <button class="task-del" data-i="${i}" data-key="${key}" title="Remove">×</button>`;
+    ul.appendChild(li);
   });
+}
+
+function addTask(inputId, key, listId) {
+  const inp = $(inputId);
+  const text = inp.value.trim();
+  if (!text) return;
+  const tasks = loadJSON(key, []);
+  tasks.push({ text, done: false });
+  saveJSON(key, tasks);
+  inp.value = '';
+  renderTasks(listId, key);
+}
+
+document.addEventListener('click', e => {
+  // Toggle done
+  if (e.target.classList.contains('task-check')) {
+    const i = +e.target.dataset.i, key = e.target.dataset.key;
+    const tasks = loadJSON(key, []);
+    tasks[i].done = !tasks[i].done;
+    saveJSON(key, tasks);
+    const listId = key === TODAY_KEY ? 'todayList' : 'tomorrowList';
+    renderTasks(listId, key);
+  }
+  // Delete
+  if (e.target.classList.contains('task-del')) {
+    const i = +e.target.dataset.i, key = e.target.dataset.key;
+    const tasks = loadJSON(key, []);
+    tasks.splice(i, 1);
+    saveJSON(key, tasks);
+    const listId = key === TODAY_KEY ? 'todayList' : 'tomorrowList';
+    renderTasks(listId, key);
+  }
+});
+
+$('todayAdd').addEventListener('click', () => addTask('todayInput', TODAY_KEY, 'todayList'));
+$('tomorrowAdd').addEventListener('click', () => addTask('tomorrowInput', TOMORROW_KEY, 'tomorrowList'));
+$('todayInput').addEventListener('keydown', e => { if (e.key === 'Enter') addTask('todayInput', TODAY_KEY, 'todayList'); });
+$('tomorrowInput').addEventListener('keydown', e => { if (e.key === 'Enter') addTask('tomorrowInput', TOMORROW_KEY, 'tomorrowList'); });
+
+renderTasks('todayList', TODAY_KEY);
+renderTasks('tomorrowList', TOMORROW_KEY);
+
+// ── Sequence health persistence ───────────────────────────────────
+const SEQ_KEY = 'jarvis_seq_v1';
+const SEQ_FIELDS = ['seqAE','seqME','seqAP','seqMP','seqAW','seqMW'];
+
+function loadSeq() {
+  const d = loadJSON(SEQ_KEY, {});
+  SEQ_FIELDS.forEach(id => { if ($(id) && d[id] != null) $(id).value = d[id]; });
+}
+function saveSeq() {
+  const d = {};
+  SEQ_FIELDS.forEach(id => { if ($(id)) d[id] = $(id).value; });
+  saveJSON(SEQ_KEY, d);
+}
+SEQ_FIELDS.forEach(id => { const el = $(id); if (el) el.addEventListener('input', saveSeq); });
+loadSeq();
+
+// ── Settings modal (from original) ───────────────────────────────
+const WATER_KEY = 'po_water_v1';
+const WHOOP_KEY = 'whoop_tokens_v1';
+const SYNC_KEY  = 'whoop_last_sync';
+
+function defaultWater() {
+  return { unit:'bottle', bottleMl:500, glassMl:250, weightUnit:'kg',
+    profile:{ weightKg:75, age:25, sex:'m', activityHrsPerWeek:5 },
+    caffeineMgPerDay:200, substances:[], logs:{} };
+}
+
+let heightUnit = 'cm', wghtUnit = 'kg', sex = 'm';
+
+function setHeightUnit(u) {
+  heightUnit = u;
+  $('heightUnitSeg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.u === u));
+  if (u === 'cm') { $('heightA').placeholder = 'cm'; $('heightB').style.display = 'none'; }
+  else { $('heightA').placeholder = 'ft'; $('heightB').placeholder = 'in'; $('heightB').style.display = ''; }
+}
+function setWeightUnit(u) {
+  wghtUnit = u;
+  $('weightUnitSeg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.u === u));
+}
+function setSex(s) {
+  sex = s;
+  $('sexSeg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.s === s));
+}
+function getHeightCm() {
+  if (heightUnit === 'cm') { const v = parseFloat($('heightA').value); return v > 0 ? v : null; }
+  const ft = parseFloat($('heightA').value)||0, inch = parseFloat($('heightB').value)||0;
+  const cm = ft*30.48 + inch*2.54; return cm > 0 ? Math.round(cm) : null;
+}
+function fillHeight(cm) {
+  if (!cm) { $('heightA').value=''; $('heightB').value=''; return; }
+  if (heightUnit === 'cm') { $('heightA').value = Math.round(cm); }
+  else { const ti = cm/2.54; $('heightA').value = Math.floor(ti/12); $('heightB').value = Math.round(ti%12); }
+}
+function populate() {
+  const w = loadJSON(WATER_KEY, defaultWater()), p = w.profile||{};
+  setWeightUnit(w.weightUnit === 'lb' ? 'lb' : 'kg');
+  setHeightUnit(p.heightUnit === 'ft' ? 'ft' : 'cm');
+  setSex(p.sex === 'f' ? 'f' : 'm');
+  fillHeight(p.heightCm||null);
+  if (p.weightKg) $('weight').value = wghtUnit==='lb' ? Math.round(p.weightKg*2.20462) : Math.round(p.weightKg);
+  else $('weight').value='';
+  $('age').value = p.age||'';
+  $('activity').value = p.activityHrsPerWeek!=null ? p.activityHrsPerWeek : '';
+}
+function saveSettings() {
+  const w = loadJSON(WATER_KEY, defaultWater()); w.profile = w.profile||{};
+  const cm = getHeightCm(); if (cm) { w.profile.heightCm = cm; w.profile.heightUnit = heightUnit; }
+  const wv = parseFloat($('weight').value);
+  if (wv>0) { w.profile.weightKg = wghtUnit==='lb' ? +(wv/2.20462).toFixed(1) : wv; w.weightUnit = wghtUnit; }
+  const age = parseInt($('age').value,10); if (age>0) w.profile.age = age;
+  w.profile.sex = sex;
+  const act = parseFloat($('activity').value); if (act>=0 && !isNaN(act)) w.profile.activityHrsPerWeek = act;
+  saveJSON(WATER_KEY, w);
+  const s = $('settingsStatus'); s.textContent='Saved ✓';
+  setTimeout(()=>{s.textContent='';},1800);
+}
+function openSettings() { populate(); renderWhoop(); $('settingsBg').classList.add('show'); syncWhoop(); }
+function closeSettings() { $('settingsBg').classList.remove('show'); }
+$('settingsOpen').addEventListener('click', openSettings);
+$('settingsClose').addEventListener('click', closeSettings);
+$('settingsBg').addEventListener('click', e => { if (e.target===$('settingsBg')) closeSettings(); });
+document.addEventListener('keydown', e => { if (e.key==='Escape') closeSettings(); });
+$('settingsSave').addEventListener('click', saveSettings);
+$('heightUnitSeg').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{const cm=getHeightCm();setHeightUnit(b.dataset.u);fillHeight(cm);}));
+$('weightUnitSeg').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+  const v=parseFloat($('weight').value), kg=v>0?(wghtUnit==='lb'?v/2.20462:v):null;
+  setWeightUnit(b.dataset.u); if(kg) $('weight').value=wghtUnit==='lb'?Math.round(kg*2.20462):Math.round(kg);
+}));
+$('sexSeg').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>setSex(b.dataset.s)));
+
+// WHOOP
+let whStats = null;
+function relTime(ts) {
+  if (!ts) return 'never';
+  const s = Math.floor((Date.now()-ts)/1000);
+  if (s<60) return 'just now';
+  if (s<3600) return Math.floor(s/60)+' min ago';
+  if (s<86400) return Math.floor(s/3600)+' h ago';
+  return Math.floor(s/86400)+' d ago';
+}
+function renderWhoop(err) {
+  const t = loadJSON(WHOOP_KEY,null);
+  const statusEl=$('whStatus'),txt=$('whStatusText'),syncEl=$('whSync'),action=$('whAction');
+  if (!t||!t.access) { statusEl.classList.remove('on'); txt.textContent='Not connected'; syncEl.textContent=''; $('whStats').style.display='none'; action.textContent='Connect on Health page'; return; }
+  statusEl.classList.add('on'); txt.textContent=err?'Connected (sync failed)':'Connected';
+  const last=Number(localStorage.getItem(SYNC_KEY))||0; syncEl.textContent='Last synced '+relTime(last);
+  action.textContent='Sync now';
+  if (whStats) { $('whStats').style.display=''; $('whRec').textContent=whStats.rec!=null?whStats.rec+'%':'—'; $('whSleep').textContent=whStats.sleep!=null?whStats.sleep+'%':'—'; $('whRhr').textContent=whStats.rhr!=null?whStats.rhr:'—'; }
+}
+async function wRefresh(t) {
+  if (!t.refresh) return null;
+  try {
+    const r=await fetch('/api/whoop-refresh',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({refresh_token:t.refresh})});
+    const j=await r.json();
+    if (j.access_token){const n={access:j.access_token,refresh:j.refresh_token||t.refresh,expires:Date.now()+(j.expires_in||3500)*1000};saveJSON(WHOOP_KEY,n);return n;}
+  } catch(e){}
+  return null;
+}
+async function wFetch(path,t) {
+  const [p,qs]=path.split('?'); const params=new URLSearchParams(qs||''); params.set('path',p);
+  const r=await fetch('/api/whoop-data?'+params.toString(),{headers:{'Authorization':'Bearer '+t.access,'Accept':'application/json'}});
+  if (r.status===401){const n=await wRefresh(t);if(n)return wFetch(path,n);throw new Error('unauthorized');}
+  if (!r.ok) throw new Error('whoop '+r.status);
+  return r.json();
+}
+async function syncWhoop() {
+  let t=loadJSON(WHOOP_KEY,null); if(!t||!t.access) return;
+  if (t.expires&&Date.now()>t.expires-60000){const n=await wRefresh(t);if(n)t=n;}
+  try {
+    const [rec,sleep]=await Promise.all([wFetch('/recovery?limit=1',t).catch(()=>null),wFetch('/activity/sleep?limit=1',t).catch(()=>null)]);
+    const r0=rec&&rec.records&&rec.records[0]; const s0=sleep&&sleep.records&&sleep.records[0];
+    whStats={rec:r0&&r0.score&&r0.score.recovery_score!=null?Math.round(r0.score.recovery_score):null,rhr:r0&&r0.score&&r0.score.resting_heart_rate!=null?Math.round(r0.score.resting_heart_rate):null,sleep:s0&&s0.score&&s0.score.sleep_performance_percentage!=null?Math.round(s0.score.sleep_performance_percentage):null};
+    localStorage.setItem(SYNC_KEY,String(Date.now())); renderWhoop();
+  } catch(e){renderWhoop(e);}
+}
+$('whAction').addEventListener('click',()=>{const t=loadJSON(WHOOP_KEY,null);if(!t||!t.access){window.location.href='health.html';return;}$('whAction').textContent='Syncing…';syncWhoop();});
+
 })();
 </script>
 </body>

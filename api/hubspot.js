@@ -1,13 +1,13 @@
 // ================================================================
 // GET /api/hubspot?type=all
-//   Returns { monthly: {...}, weekly: {...} } in one shot.
-//   HubSpot CRM search limit = 4 req/s.  We fire at most 2
-//   concurrent searches per batch, with 350 ms between batches.
+//   Returns { monthly, weekly } with full call-funnel breakdown.
 //
-// Env var: HUBSPOT_TOKEN  (HubSpot Private App)
-// Scopes : crm.objects.meetings.read
-//          crm.objects.calls.read
-//          crm.objects.deals.read
+// Env var : HUBSPOT_TOKEN  (HubSpot Private App)
+// Scopes  : crm.objects.meetings.read
+//           crm.objects.calls.read
+//           crm.objects.deals.read
+//
+// Rate-limit strategy: fully sequential with explicit 300 ms gaps
 // ================================================================
 
 const ANISH_ID    = '88049636';
@@ -16,19 +16,29 @@ const MICHELLE_ID = '93119217';
 // Michelle's first 2 days (Jun 8–9 2026) were over-reported.
 const MICHELLE_CALL_FLOOR = '2026-06-10';
 
-// Connected call disposition UUIDs (from sync-sales.py)
+// ── Call disposition UUIDs (from sync-sales.py) ──────────────────
 const CONNECT_DISPOSITIONS = new Set([
   'f240bbac-87c9-4f6e-bf70-924b57d47db7',
   'bb945bfa-dc67-4bc0-b078-0438372832a1',
   'e7390be5-647d-4795-8672-210114ba37e3',
   'cd510b3a-be32-4546-b3d8-9f14c1d8c349',
 ]);
+const PITCHED_DISPOSITIONS = new Set([
+  'bb945bfa-dc67-4bc0-b078-0438372832a1',
+  'e7390be5-647d-4795-8672-210114ba37e3',
+  'cd510b3a-be32-4546-b3d8-9f14c1d8c349',
+]);
+const PAST_PITCH_DISPOSITIONS = new Set([
+  'e7390be5-647d-4795-8672-210114ba37e3',
+  'cd510b3a-be32-4546-b3d8-9f14c1d8c349',
+]);
+const MEETING_SET_DISPOSITION = 'cd510b3a-be32-4546-b3d8-9f14c1d8c349';
 
-// Meeting exclusion rules
+// ── Meeting exclusion rules ───────────────────────────────────────
 const MTG_EXCLUDE_WORDS  = ['round 1', 'round 2', 'interview'];
 const MTG_EXCLUDE_SUFFIX = 'and anish krishanthan';
 
-// Deal stages
+// ── Deal stages ───────────────────────────────────────────────────
 const MQL_STAGES = new Set([
   '1129362176', '1129362177',
   '102677034', '109814654',
@@ -39,7 +49,7 @@ const SQL_STAGES = new Set([
   'presentationscheduled', 'decisionmakerboughtin', 'contractsent', 'closedwon',
 ]);
 
-// ── Utilities ────────────────────────────────────────────────────
+// ── Date helpers ─────────────────────────────────────────────────
 
 function isoToday()      { return new Date().toISOString().slice(0, 10); }
 function isoMonthStart() {
@@ -53,9 +63,9 @@ function isoWeekStart() {
   return mon.toISOString().slice(0, 10);
 }
 
-function normTitle(s) {
-  return (s || '').toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
-}
+// ── Meeting helpers ───────────────────────────────────────────────
+
+function normTitle(s) { return (s || '').toLowerCase().replace(/[^a-z0-9\s]/g, '').trim(); }
 function isSalesMeeting(title) {
   const t = (title || '').toLowerCase().trim();
   if (MTG_EXCLUDE_WORDS.some(kw => t.includes(kw))) return false;
@@ -77,7 +87,22 @@ function countMeetings(records, ownerId) {
   return count;
 }
 
-// ── Typed search helpers ─────────────────────────────────────────
+// ── Call tally ────────────────────────────────────────────────────
+
+function tallyFunnel(calls) {
+  let dials = 0, connects = 0, pitched = 0, pastPitch = 0, meetingSet = 0;
+  for (const c of calls) {
+    const disp = c.properties.hs_call_disposition;
+    dials++;
+    if (CONNECT_DISPOSITIONS.has(disp))    connects++;
+    if (PITCHED_DISPOSITIONS.has(disp))    pitched++;
+    if (PAST_PITCH_DISPOSITIONS.has(disp)) pastPitch++;
+    if (disp === MEETING_SET_DISPOSITION)  meetingSet++;
+  }
+  return { dials, connects, pitched, pastPitch, meetingSet };
+}
+
+// ── Search helpers ────────────────────────────────────────────────
 
 function searchMeetings(token, ownerId, start, end) {
   return hsSearch(token, 'meetings', {
@@ -101,68 +126,74 @@ function searchCalls(token, ownerId, start, end) {
 }
 
 function searchDeals(token, monthStart) {
-  const allMqlSqlStages = [...new Set([...MQL_STAGES, ...SQL_STAGES])];
+  const stages = [...new Set([...MQL_STAGES, ...SQL_STAGES])];
   return hsSearch(token, 'deals', {
     filterGroups: [{ filters: [
       { propertyName: 'createdate', operator: 'GTE', value: String(new Date(monthStart).getTime()) },
       { propertyName: 'pipeline',   operator: 'EQ',  value: 'default' },
-      { propertyName: 'dealstage',  operator: 'IN',  values: allMqlSqlStages },
+      { propertyName: 'dealstage',  operator: 'IN',  values: stages },
     ]}],
     properties: ['dealstage', 'hubspot_owner_id'],
   });
 }
 
-// ── Main fetch: 4 batches, 2 concurrent each, 350 ms apart ───────
+// ── Main: 9 sequential calls, 300 ms apart ────────────────────────
 
 async function getAll(token) {
   const ms  = isoMonthStart();
   const td  = isoToday();
   const ws  = isoWeekStart();
   const dow = new Date().getDay();
-  const michelleCutoff = ms > MICHELLE_CALL_FLOOR ? ms : MICHELLE_CALL_FLOOR;
+  const michFloor = ms > MICHELLE_CALL_FLOOR ? ms : MICHELLE_CALL_FLOOR;
 
-  // Sequential with explicit 300ms gap — guarantees ≤ 3.3 req/s regardless of
-  // how fast HubSpot responds, and handles pagination (each page = 1 request).
   const w = ms2 => new Promise(r => setTimeout(r, ms2));
-  const anishMtgsM    = await searchMeetings(token, ANISH_ID,    ms, td); await w(300);
-  const michelleMtgsM = await searchMeetings(token, MICHELLE_ID, ms, td); await w(300);
-  const deals         = await searchDeals(token, ms);                      await w(300);
-  const anishCalls    = await searchCalls(token, ANISH_ID,    ws, td);    await w(300);
-  const michelleCalls = await searchCalls(token, MICHELLE_ID, ws, td);    await w(300);
-  const anishMtgsW    = await searchMeetings(token, ANISH_ID,    ws, td); await w(300);
-  const michelleMtgsW = await searchMeetings(token, MICHELLE_ID, ws, td);
 
-  // ── Process monthly ──────────────────────────────────────────
+  // 1–3: Monthly meetings + deals
+  const anishMtgsM    = await searchMeetings(token, ANISH_ID,    ms, td);      await w(300);
+  const michelleMtgsM = await searchMeetings(token, MICHELLE_ID, ms, td);      await w(300);
+  const deals         = await searchDeals(token, ms);                           await w(300);
+  // 4–5: Weekly calls
+  const anishCallsW   = await searchCalls(token, ANISH_ID,    ws, td);         await w(300);
+  const michelleCallsW = await searchCalls(token, MICHELLE_ID, ws, td);        await w(300);
+  // 6–7: Weekly meetings
+  const anishMtgsW    = await searchMeetings(token, ANISH_ID,    ws, td);      await w(300);
+  const michelleMtgsW = await searchMeetings(token, MICHELLE_ID, ws, td);      await w(300);
+  // 8–9: Monthly calls (for full-month funnel)
+  const anishCallsM   = await searchCalls(token, ANISH_ID,    ms, td);         await w(300);
+  const michelleCallsM = await searchCalls(token, MICHELLE_ID, michFloor, td);
+
+  // ── Bar chart grouping (weekly calls) ─────────────────────────
+  const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+  const zero = () => ({ Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0 });
+  const byDay = { Anish: zero(), Michelle: zero() };
+
+  for (const [calls, who] of [[anishCallsW, 'Anish'], [michelleCallsW, 'Michelle']]) {
+    for (const c of calls) {
+      const dateStr = (c.properties.hs_createdate || '').slice(0, 10);
+      const di = new Date(dateStr + 'T12:00:00Z').getDay();
+      if (di >= 1 && di <= 5) byDay[who][DAYS[di - 1]]++;
+    }
+  }
+
+  // ── Funnel tallies ────────────────────────────────────────────
+  const wfa = tallyFunnel(anishCallsW);
+  const wfm = tallyFunnel(michelleCallsW);
+  const mfa = tallyFunnel(anishCallsM);
+  const mfm = tallyFunnel(michelleCallsM);
+
+  // ── Meetings ──────────────────────────────────────────────────
   const apptAnish    = countMeetings(anishMtgsM,    ANISH_ID);
   const apptMichelle = countMeetings(michelleMtgsM, MICHELLE_ID);
+  const awm          = countMeetings(anishMtgsW,    ANISH_ID);
+  const mwm          = countMeetings(michelleMtgsW, MICHELLE_ID);
+
+  // ── Deals ────────────────────────────────────────────────────
   let mqls = 0, sqls = 0;
   for (const d of deals) {
     const stage = d.properties.dealstage;
     if (MQL_STAGES.has(stage)) mqls++;
     if (SQL_STAGES.has(stage)) sqls++;
   }
-
-  // ── Process weekly ───────────────────────────────────────────
-  const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-  const zero = () => ({ Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0 });
-  const byDay = { Anish: zero(), Michelle: zero() };
-
-  function tallyCalls(calls, who) {
-    let total = 0, connects = 0;
-    for (const c of calls) {
-      const dateStr = (c.properties.hs_createdate || '').slice(0, 10);
-      const di = new Date(dateStr + 'T12:00:00Z').getDay();
-      if (di >= 1 && di <= 5) byDay[who][DAYS[di - 1]]++;
-      total++;
-      if (CONNECT_DISPOSITIONS.has(c.properties.hs_call_disposition)) connects++;
-    }
-    return { total, connects };
-  }
-
-  const at  = tallyCalls(anishCalls,    'Anish');
-  const mt  = tallyCalls(michelleCalls, 'Michelle');
-  const awm = countMeetings(anishMtgsW,    ANISH_ID);
-  const mwm = countMeetings(michelleMtgsW, MICHELLE_ID);
 
   const daysElapsed = Math.max(1, dow === 0 ? 5 : Math.min(dow, 5));
 
@@ -173,14 +204,25 @@ async function getAll(token) {
       apptMichelle,
       mqls,
       sqls,
+      anish:    { ...mfa, meetings: apptAnish },
+      michelle: { ...mfm, meetings: apptMichelle },
     },
     weekly: {
       byDay,
-      anish:    { calls: at.total, connects: at.connects, meetings: awm, avgDials: +(at.total / daysElapsed).toFixed(1) },
-      michelle: { calls: mt.total, connects: mt.connects, meetings: mwm, avgDials: +(mt.total / daysElapsed).toFixed(1) },
       weekMeetings: awm + mwm,
       weekGoal: 10,
+      anish: {
+        ...wfa,
+        meetings: awm,
+        avgDials: +(wfa.dials / daysElapsed).toFixed(1),
+      },
+      michelle: {
+        ...wfm,
+        meetings: mwm,
+        avgDials: +(wfm.dials / daysElapsed).toFixed(1),
+      },
     },
+    meta: { michFloor },
   };
 }
 
@@ -196,7 +238,7 @@ export default async function handler(req, res) {
   const token = process.env.HUBSPOT_TOKEN;
   if (!token) return res.status(500).json({
     error: 'HUBSPOT_TOKEN env var not set',
-    setup: 'Create a HubSpot Private App with meetings.read, calls.read, deals.read scopes.',
+    setup: 'Add HUBSPOT_TOKEN to Vercel env vars (Private App with meetings/calls/deals read scopes).',
   });
 
   const type = (req.query && req.query.type) || '';
@@ -209,33 +251,28 @@ export default async function handler(req, res) {
   }
 }
 
-// ── HubSpot search (auto-paginates, up to 2 000 records) ─────────
+// ── HubSpot search (auto-paginates up to 2 000 records) ──────────
 
 async function hsSearch(token, objectType, body) {
   const url     = `https://api.hubapi.com/crm/v3/objects/${objectType}/search`;
   const results = [];
   let after;
-
   for (;;) {
     const payload = { ...body, limit: 200 };
     if (after != null) payload.after = after;
-
     const r = await fetch(url, {
       method:  'POST',
       headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
       body:    JSON.stringify(payload),
     });
-
     if (!r.ok) {
       const txt = await r.text().catch(() => '');
       throw new Error(`HubSpot ${objectType} ${r.status}: ${txt.slice(0, 300)}`);
     }
-
     const data = await r.json();
     results.push(...(data.results || []));
     after = data.paging?.next?.after;
     if (!after || results.length >= 2000) break;
   }
-
   return results;
 }
