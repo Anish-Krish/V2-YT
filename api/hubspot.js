@@ -66,6 +66,19 @@ function isoMonthStart() {
   const n = new Date();
   return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-01`;
 }
+// Monday of the week that was N full weeks ago
+function msWeeksAgo(n) {
+  const mon = new Date();
+  const dow = mon.getDay();
+  mon.setDate(mon.getDate() - (dow === 0 ? 6 : dow - 1) - n * 7);
+  mon.setHours(0, 0, 0, 0);
+  return String(mon.getTime());
+}
+// ISO date (YYYY-MM-DD) for the Monday N weeks ago
+function isoMonday(weeksBack) {
+  const d = new Date(Number(msWeeksAgo(weeksBack)));
+  return d.toISOString().slice(0, 10);
+}
 // ── Call tally ────────────────────────────────────────────────────
 
 function tallyFunnel(calls) {
@@ -120,6 +133,8 @@ async function getAll(token) {
 
   const w = ms2 => new Promise(r => setTimeout(r, ms2));
 
+  const trendMs = msWeeksAgo(3); // Monday 3 weeks ago = start of 4-week window
+
   // 1: Deals
   const deals          = await searchDeals(token, isoMonthStart());           await w(300);
   // 2–3: Weekly calls
@@ -127,7 +142,9 @@ async function getAll(token) {
   const michelleCallsW = await searchCalls(token, MICHELLE_ID, wMs);         await w(300);
   // 4–5: Monthly calls (for full-month funnel + appointment counts)
   const anishCallsM    = await searchCalls(token, ANISH_ID,    mMs);         await w(300);
-  const michelleCallsM = await searchCalls(token, MICHELLE_ID, michFloorMs);
+  const michelleCallsM = await searchCalls(token, MICHELLE_ID, michFloorMs); await w(300);
+  // 6: 4-week trend — fetch from 3 Mondays ago so we always have 4 bars
+  const anishCalls4W   = await searchCalls(token, ANISH_ID,    trendMs);
 
   // ── Bar chart grouping (weekly calls) ─────────────────────────
   const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
@@ -174,26 +191,26 @@ async function getAll(token) {
   // Fri/Sat/Sun = full week done.
   const daysElapsed = (dow === 0 || dow >= 5) ? 5 : Math.max(1, dow - 1);
 
-  // ── Weekly history from monthly calls ─────────────────────────
-  // Group Anish's monthly calls by ISO week (Mon-based) so the rolling trend
-  // chart can show actual prior weeks without extra API calls.
-  const weeklyHistory = {};
-  for (const c of anishCallsM) {
+  // ── 4-week trend (always exactly 4 bars, zeros for empty weeks) ──
+  const buckets = {};
+  for (const c of anishCalls4W) {
     const ts = Number(c.properties.hs_createdate);
     if (!ts) continue;
-    const d = new Date(ts);
-    const day = d.getDay();
+    const d = new Date(ts), day = d.getDay();
     const mon = new Date(d);
     mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
     mon.setHours(0, 0, 0, 0);
     const wk = mon.toISOString().slice(0, 10);
-    if (!weeklyHistory[wk]) weeklyHistory[wk] = [];
-    weeklyHistory[wk].push(c);
+    if (!buckets[wk]) buckets[wk] = [];
+    buckets[wk].push(c);
   }
-  const weeklyTrend = Object.entries(weeklyHistory).map(([wk, calls]) => {
+  // Build exactly 4 entries: 3 weeks ago → current week
+  const weeklyTrend = [3, 2, 1, 0].map(n => {
+    const wk = isoMonday(n);
+    const calls = buckets[wk] || [];
     const f = tallyFunnel(calls);
     return { week: wk, dials: f.dials, meetings: f.meetingSet };
-  }).sort((a, b) => a.week.localeCompare(b.week));
+  });
 
   return {
     monthly: {

@@ -179,6 +179,11 @@ body::after {
 .wk-stat { background: rgba(0,212,255,0.04); border: 1px solid rgba(0,212,255,0.07); border-radius: 7px; padding: 7px 10px; }
 .wk-stat-val { font-size: 20px; font-weight: 800; color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1; }
 .wk-stat-lbl { font-size: 9px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
+/* Person toggle */
+.person-toggle { display: flex; gap: 6px; margin-bottom: 10px; }
+.pt-btn { font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(0,212,255,0.18); background: transparent; color: var(--text-tertiary); cursor: pointer; font-family: var(--font); letter-spacing: 0.04em; transition: all 0.15s; }
+.pt-btn:hover { border-color: rgba(0,212,255,0.4); color: var(--text-secondary); }
+.pt-btn.active { background: rgba(0,212,255,0.12); border-color: var(--cyan); color: var(--cyan); }
 
 /* ── Rolling trend ─────────────────────────────────────────────── */
 .trend-section { margin-bottom: 14px; }
@@ -466,7 +471,14 @@ body::after {
 
         <!-- Weekly card -->
         <div class="card">
-          <span class="card-label" id="weekLabel">This Week</span>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span class="card-label" id="weekLabel" style="margin-bottom:0">This Week</span>
+            <div class="person-toggle">
+              <button class="pt-btn active" id="ptBoth">Both</button>
+              <button class="pt-btn" id="ptAnish">Anish</button>
+              <button class="pt-btn" id="ptMichelle">Michelle</button>
+            </div>
+          </div>
           <div class="wk-stat-row">
             <div class="wk-stat">
               <div class="wk-stat-val" style="color:var(--cyan)" id="wkMeetings">—</div>
@@ -759,12 +771,35 @@ function updateSprints(data) {
   setText('kpiApptM', data.monthly.apptMichelle);
   setText('kpiMqls',  data.monthly.mqls);
   setText('kpiSqls',  data.monthly.sqls);
-  // Weekly stats
+  // Weekly stats — store for toggle
   setText('weekLabel', weekRange());
-  setText('wkMeetings', wm);
-  setText('wkAvg', data.weekly.anish.avgDials);
-  setText('wkConn', data.weekly.anish.connects);
+  weeklySnapshot = data.weekly;
+  applyWeeklyView();
 }
+
+// ── Person toggle ─────────────────────────────────────────────
+let weeklyView = 'both', weeklySnapshot = null;
+function applyWeeklyView() {
+  const d = weeklySnapshot; if (!d) return;
+  const v = weeklyView;
+  const meetings = v==='anish' ? d.anish.meetings : v==='michelle' ? d.michelle.meetings : d.weekMeetings;
+  const avg      = v==='anish' ? d.anish.avgDials : v==='michelle' ? d.michelle.avgDials : +((d.anish.avgDials+d.michelle.avgDials)/2).toFixed(1);
+  const conn     = v==='anish' ? d.anish.connects : v==='michelle' ? d.michelle.connects : d.anish.connects+d.michelle.connects;
+  setText('wkMeetings', meetings);
+  setText('wkAvg', avg);
+  setText('wkConn', conn);
+  ['both','anish','michelle'].forEach(k => {
+    const b = $('pt'+k[0].toUpperCase()+k.slice(1));
+    if(b) b.classList.toggle('active', k===v);
+  });
+}
+['ptBoth','ptAnish','ptMichelle'].forEach(id => {
+  const el = $(id); if(!el) return;
+  el.addEventListener('click', () => {
+    weeklyView = id==='ptBoth' ? 'both' : id==='ptAnish' ? 'anish' : 'michelle';
+    applyWeeklyView();
+  });
+});
 
 // ── Funnel renderer ───────────────────────────────────────────
 function renderFunnel(containerId, f) {
@@ -805,23 +840,20 @@ function renderBarChart(byDay) {
 // ── Rolling trend ─────────────────────────────────────────────
 const TREND_KEY='jarvis_trend_v1';
 function saveTrend(data) {
-  // Use server-derived weekly breakdown of monthly calls — gives real prior weeks
-  // without extra API calls, instead of accumulating one week at a time.
   if(!data.weeklyTrend||!data.weeklyTrend.length) return;
-  const enriched=data.weeklyTrend.map(e=>({
+  // weeklyTrend is always exactly 4 entries from the server (3 weeks ago → now)
+  const weeks=data.weeklyTrend.map(e=>({
     ...e,
     label:new Date(e.week+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}),
   }));
-  const last4=enriched.slice(-4);
-  saveJSON(TREND_KEY,last4); renderTrend(last4);
+  saveJSON(TREND_KEY,weeks); renderTrend(weeks);
 }
 function renderTrend(history) {
-  const placeholder='<div style="font-size:11px;color:var(--text-tertiary);padding:4px 0">Builds automatically — 1 bar per week</div>';
-  if(!history||!history.length){ $('trendMtg').innerHTML=placeholder; $('trendDials').innerHTML=''; return; }
-  const last4=history.slice(-4), ws=isoWeekStart(), MAX_H=44;
+  if(!history||!history.length){ $('trendMtg').innerHTML=''; $('trendDials').innerHTML=''; return; }
+  const ws=isoWeekStart(), MAX_H=44;
   function chartHTML(key,goal) {
-    const maxVal=Math.max(goal||1,...last4.map(e=>e[key]));
-    const bars=last4.map(e=>{
+    const maxVal=Math.max(goal||1,...history.map(e=>e[key]));
+    const bars=history.map(e=>{
       const barH=Math.max(4,Math.round(e[key]/maxVal*MAX_H)), cur=e.week===ws;
       return `<div class="trend-bar-wrap">
         <div class="trend-val">${e[key]}</div>
@@ -829,8 +861,7 @@ function renderTrend(history) {
         <div class="trend-wk">${e.label}</div>
       </div>`;
     }).join('');
-    const note=last4.length<4?`<div style="font-size:10px;color:var(--text-tertiary);margin-top:6px">${last4.length}/4 weeks</div>`:'';
-    return `<div class="trend-chart">${bars}</div>${note}`;
+    return `<div class="trend-chart">${bars}</div>`;
   }
   $('trendMtg').innerHTML   = chartHTML('meetings',10);
   $('trendDials').innerHTML = chartHTML('dials',200);
