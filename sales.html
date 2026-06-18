@@ -545,12 +545,9 @@ async function loadAll() {
   setLoading(true);
 
   try {
-    const [monthly, weekly] = await Promise.all([
-      fetchJSON('/api/hubspot?type=monthly'),
-      fetchJSON('/api/hubspot?type=weekly'),
-    ]);
-    renderMonthly(monthly);
-    renderWeekly(weekly);
+    const data = await fetchJSON('/api/hubspot?type=all');
+    renderMonthly(data.monthly);
+    renderWeekly(data.weekly);
     $('syncInfo').textContent = 'Synced ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
     countdown = POLL_SEC;
   } catch (e) {
