@@ -79,9 +79,11 @@ function countMeetings(records, ownerId) {
     const p = r.properties;
     if (ownerId && p.hubspot_owner_id !== ownerId) continue;
     if (!isSalesMeeting(p.hs_meeting_title)) continue;
-    const key = (p.hs_createdate || '').slice(0, 10) + '|' + normTitle(p.hs_meeting_title);
-    if (seen.has(key)) continue;
-    seen.add(key);
+    // Use HubSpot record ID as the unique key — title+date dedup was incorrectly
+    // collapsing distinct meetings that happened to share a common title (e.g. "Discovery Call")
+    // on the same day.
+    if (seen.has(r.id)) continue;
+    seen.add(r.id);
     count++;
   }
   return count;
