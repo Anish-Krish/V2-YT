@@ -195,7 +195,9 @@ async function getAll(token) {
     if (SQL_STAGES.has(stage)) sqls++;
   }
 
-  const daysElapsed = Math.max(1, dow === 0 ? 5 : Math.min(dow, 5));
+  // Days *completed* this week. Current day is in-progress so subtract 1 (Mon-Thu).
+  // Fri/Sat/Sun = full week done.
+  const daysElapsed = (dow === 0 || dow >= 5) ? 5 : Math.max(1, dow - 1);
 
   return {
     monthly: {
@@ -226,6 +228,51 @@ async function getAll(token) {
   };
 }
 
+// ── Contacts: sequence enrollment + added this week ───────────────
+// Uses limit:1 + total field — fast, one request per count.
+
+async function countSearch(token, objectType, filters) {
+  const r = await fetch(`https://api.hubapi.com/crm/v3/objects/${objectType}/search`, {
+    method:  'POST',
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ filterGroups: [{ filters }], limit: 1, properties: [] }),
+  });
+  if (!r.ok) return null; // non-fatal — return null so UI shows "—"
+  const data = await r.json();
+  return data.total ?? null;
+}
+
+async function getContacts(token) {
+  const ws  = isoWeekStart();
+  const td  = isoToday();
+  const w   = ms2 => new Promise(r => setTimeout(r, ms2));
+
+  const anishEnrolled    = await countSearch(token, 'contacts', [
+    { propertyName: 'hubspot_owner_id',        operator: 'EQ', value: ANISH_ID },
+    { propertyName: 'hs_sequences_is_enrolled', operator: 'EQ', value: 'true'  },
+  ]);
+  await w(300);
+  const michelleEnrolled = await countSearch(token, 'contacts', [
+    { propertyName: 'hubspot_owner_id',        operator: 'EQ', value: MICHELLE_ID },
+    { propertyName: 'hs_sequences_is_enrolled', operator: 'EQ', value: 'true'     },
+  ]);
+  await w(300);
+  const anishAdded    = await countSearch(token, 'contacts', [
+    { propertyName: 'hubspot_owner_id', operator: 'EQ',      value: ANISH_ID },
+    { propertyName: 'createdate',       operator: 'BETWEEN', value: ws, highValue: td },
+  ]);
+  await w(300);
+  const michelleAdded = await countSearch(token, 'contacts', [
+    { propertyName: 'hubspot_owner_id', operator: 'EQ',      value: MICHELLE_ID },
+    { propertyName: 'createdate',       operator: 'BETWEEN', value: ws, highValue: td },
+  ]);
+
+  return {
+    anish:    { enrolled: anishEnrolled,    added: anishAdded },
+    michelle: { enrolled: michelleEnrolled, added: michelleAdded },
+  };
+}
+
 // ── Handler ───────────────────────────────────────────────────────
 
 export default async function handler(req, res) {
@@ -243,8 +290,9 @@ export default async function handler(req, res) {
 
   const type = (req.query && req.query.type) || '';
   try {
-    if (type === 'all') return res.json(await getAll(token));
-    return res.status(400).json({ error: 'type must be all' });
+    if (type === 'all')      return res.json(await getAll(token));
+    if (type === 'contacts') return res.json(await getContacts(token));
+    return res.status(400).json({ error: 'type must be all or contacts' });
   } catch (e) {
     console.error('[hubspot]', e.message || e);
     return res.status(502).json({ error: e.message || String(e) });

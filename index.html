@@ -190,17 +190,17 @@ body::after {
 .legend-dot { width: 8px; height: 8px; border-radius: 2px; }
 
 /* ── Rolling trend ── */
-.trend-section { margin-bottom: 14px; }
-.trend-label { font-size: 10px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 8px; }
-.trend-bars { display: flex; align-items: flex-end; gap: 6px; height: 50px; }
-.trend-bar-wrap { display: flex; flex-direction: column; align-items: center; flex: 1; }
+.trend-section { margin-bottom: 16px; }
+.trend-label { font-size: 10px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 10px; }
+.trend-chart { display: flex; align-items: flex-end; gap: 8px; }
+.trend-bar-wrap { display: flex; flex-direction: column; align-items: center; flex: 1; gap: 5px; }
+.trend-val { font-size: 12px; font-weight: 700; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 .trend-bar {
-  width: 100%; border-radius: 3px 3px 0 0; min-height: 2px;
-  background: rgba(255,255,255,0.12); transition: height 0.4s ease;
+  width: 100%; border-radius: 4px 4px 0 0;
+  background: rgba(255,255,255,0.10); transition: height 0.5s ease;
 }
-.trend-bar.current { background: var(--green); }
-.trend-week-lbl { font-size: 9px; color: var(--text-tertiary); margin-top: 4px; text-align: center; }
-.trend-val { font-size: 9px; color: var(--text-secondary); margin-bottom: 2px; font-variant-numeric: tabular-nums; }
+.trend-bar.current { background: var(--green); box-shadow: 0 0 12px rgba(107,227,164,0.3); }
+.trend-week-lbl { font-size: 9px; color: var(--text-tertiary); text-align: center; }
 
 /* ── Kanban / tasks ── */
 .task-list { list-style: none; margin-bottom: 10px; }
@@ -246,16 +246,29 @@ body::after {
 .add-btn:hover { background: rgba(255,255,255,0.12); }
 
 /* ── Deadlines ── */
+.deadline-card {
+  border-color: rgba(251,146,60,0.22);
+  background: rgba(251,146,60,0.04);
+}
 .deadline-row {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
-  font-size: 13px;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px;
 }
 .deadline-row:last-child { border-bottom: 0; }
-.deadline-lbl { color: var(--text-secondary); }
-.deadline-days {
-  font-family: var(--font-mono); font-size: 12px; color: var(--text-primary); font-weight: 700;
-}
+.deadline-lbl { color: var(--text-secondary); font-size: 12px; }
+.deadline-badge { text-align: right; flex-shrink: 0; }
+.deadline-num { font-size: 22px; font-weight: 800; color: var(--orange); font-variant-numeric: tabular-nums; line-height: 1; }
+.deadline-num.urgent { color: var(--red); }
+.deadline-num.safe   { color: var(--green); }
+.deadline-sub { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-tertiary); }
+
+/* ── Kanban card accent ── */
+.focus-card  { border-left: 3px solid var(--green);  }
+.plan-card   { border-left: 3px solid rgba(255,255,255,0.12); }
+.card-sublabel { font-size: 11px; color: var(--text-tertiary); float: right; margin-top: -2px; font-variant-numeric: tabular-nums; }
+
+/* ── Appointments accent ── */
+.kpi-val-accent { color: var(--green); }
 
 /* ── Sequence health table ── */
 .seq-table { width: 100%; border-collapse: collapse; font-size: 12px; }
@@ -401,7 +414,7 @@ body::after {
 
         <div class="kpi-row">
           <div class="kpi">
-            <div class="kpi-val" id="kpiAppts">—</div>
+            <div class="kpi-val kpi-val-accent" id="kpiAppts">—</div>
             <div class="kpi-sub">Appointments</div>
             <div class="kpi-detail"><span id="kpiApptA">—</span> Anish · <span id="kpiApptM">—</span> Michelle</div>
           </div>
@@ -480,8 +493,8 @@ body::after {
     <div>
 
       <!-- Today's Focus -->
-      <div class="card">
-        <span class="card-label">Today's Focus</span>
+      <div class="card focus-card">
+        <span class="card-label">Today's Focus <span class="card-sublabel" id="todayCount"></span></span>
         <ul class="task-list" id="todayList"></ul>
         <div class="add-task-row">
           <input class="task-input" id="todayInput" placeholder="Add commitment…" />
@@ -490,8 +503,8 @@ body::after {
       </div>
 
       <!-- Tomorrow -->
-      <div class="card">
-        <span class="card-label">Tomorrow</span>
+      <div class="card plan-card">
+        <span class="card-label">Tomorrow <span class="card-sublabel" id="tomorrowCount"></span></span>
         <ul class="task-list" id="tomorrowList"></ul>
         <div class="add-task-row">
           <input class="task-input" id="tomorrowInput" placeholder="Plan ahead…" />
@@ -499,9 +512,28 @@ body::after {
         </div>
       </div>
 
+      <!-- Deadlines (prominent) -->
+      <div class="card deadline-card">
+        <span class="card-label">Deadlines</span>
+        <div class="deadline-row">
+          <span class="deadline-lbl">Machine · Michelle 60 dials/day<br><span style="font-size:10px;color:var(--text-tertiary)">Jun 30, 2026</span></span>
+          <div class="deadline-badge">
+            <div class="deadline-num" id="dlDialsFull">—</div>
+            <div class="deadline-sub">days left</div>
+          </div>
+        </div>
+        <div class="deadline-row">
+          <span class="deadline-lbl">Outcome · 10 meetings/wk<br><span style="font-size:10px;color:var(--text-tertiary)">Jul 2, 2026</span></span>
+          <div class="deadline-badge">
+            <div class="deadline-num" id="dlMtgFull">—</div>
+            <div class="deadline-sub">days left</div>
+          </div>
+        </div>
+      </div>
+
       <!-- Sequence & List Health -->
       <div class="card">
-        <span class="card-label">Sequence &amp; List Health</span>
+        <span class="card-label">Sequence &amp; List Health <span class="card-sublabel" id="seqSyncTime"></span></span>
         <table class="seq-table">
           <thead>
             <tr><th></th><th>Anish</th><th>Michelle</th></tr>
@@ -509,34 +541,21 @@ body::after {
           <tbody>
             <tr>
               <td>Enrolled in sequences</td>
-              <td><input class="seq-input" id="seqAE" placeholder="—" /></td>
-              <td><input class="seq-input" id="seqME" placeholder="—" /></td>
+              <td style="text-align:center;font-weight:700;color:var(--text-primary)" id="seqAE">—</td>
+              <td style="text-align:center;font-weight:700;color:var(--text-primary)" id="seqME">—</td>
             </tr>
             <tr>
-              <td>P1 contacts available</td>
+              <td>P1 contacts available <span style="font-size:9px;color:var(--text-tertiary)">(manual)</span></td>
               <td><input class="seq-input" id="seqAP" placeholder="—" /></td>
               <td><input class="seq-input" id="seqMP" placeholder="—" /></td>
             </tr>
             <tr>
               <td>Added this week</td>
-              <td><input class="seq-input" id="seqAW" placeholder="—" /></td>
-              <td><input class="seq-input" id="seqMW" placeholder="—" /></td>
+              <td style="text-align:center;font-weight:700;color:var(--text-primary)" id="seqAW">—</td>
+              <td style="text-align:center;font-weight:700;color:var(--text-primary)" id="seqMW">—</td>
             </tr>
           </tbody>
         </table>
-      </div>
-
-      <!-- Deadlines -->
-      <div class="card">
-        <span class="card-label">Deadlines</span>
-        <div class="deadline-row">
-          <span class="deadline-lbl">Machine: Michelle 60 dials/day</span>
-          <span class="deadline-days" id="dlDialsFull">—</span>
-        </div>
-        <div class="deadline-row">
-          <span class="deadline-lbl">Outcome: 10 meetings/wk</span>
-          <span class="deadline-days" id="dlMtgFull">—</span>
-        </div>
       </div>
 
     </div>
@@ -641,12 +660,15 @@ const DL_DIALS = '2026-06-30';
 const DL_MTG   = '2026-07-02';
 const MICHELLE_CALL_FLOOR = '2026-06-10';
 
+function dlColor(days) {
+  return days <= 7 ? 'urgent' : days <= 14 ? '' : 'safe';
+}
 function renderDeadlines() {
   const dd = daysUntil(DL_DIALS), dm = daysUntil(DL_MTG);
-  setText('dlDials',    dd + ' days');
-  setText('dlMtg',      dm + ' days');
-  setText('dlDialsFull', dd + ' days');
-  setText('dlMtgFull',   dm + ' days');
+  setText('dlDials',    dd + ' d');
+  setText('dlMtg',      dm + ' d');
+  const ddf = $('dlDialsFull'); if (ddf) { ddf.textContent = dd; ddf.className = 'deadline-num ' + dlColor(dd); }
+  const dmf = $('dlMtgFull');   if (dmf) { dmf.textContent = dm; dmf.className = 'deadline-num ' + dlColor(dm); }
 }
 renderDeadlines();
 
@@ -677,7 +699,8 @@ function updateSprints(data) {
   // Meetings sprint: 10/wk by Jul 2
   const wm = data.weekly.weekMeetings;
   const dow = new Date().getDay();
-  const daysElapsed = Math.max(1, dow === 0 ? 5 : Math.min(dow, 5));
+  // Days completed (current day in-progress excluded on Mon-Thu)
+  const daysElapsed = (dow === 0 || dow >= 5) ? 5 : Math.max(1, dow - 1);
   const proj = Math.round((wm / daysElapsed) * 5);
   let mtgCls, mtgLabel, mtgDetail;
   if (wm >= 8 || proj >= 10)       { mtgCls = 'on-track';  mtgLabel = 'ON TRACK';  }
@@ -772,29 +795,35 @@ function saveTrend(data) {
 }
 
 function renderTrend(history) {
+  const placeholder = '<div style="font-size:11px;color:var(--text-tertiary);padding:4px 0">Building — updates each sync (1 bar/week)</div>';
   if (!history || !history.length) {
-    $('trendMtg').innerHTML   = '<span style="font-size:11px;color:var(--text-tertiary)">No data yet — auto-builds each sync</span>';
+    $('trendMtg').innerHTML   = placeholder;
     $('trendDials').innerHTML = '';
     return;
   }
   const last4 = history.slice(-4);
-  const ws = isoWeekStart();
+  const ws    = isoWeekStart();
+  const MAX_H = 46; // px — fixed scale, no percentage
 
-  function barsHTML(key, maxPad) {
-    const maxVal = Math.max(1, maxPad, ...last4.map(e => e[key]));
-    return last4.map(e => {
-      const pct = Math.max(2, Math.round(e[key] / maxVal * 100));
+  function chartHTML(key, goalLine) {
+    const maxVal = Math.max(goalLine || 1, ...last4.map(e => e[key]));
+    const bars = last4.map(e => {
+      const barH = Math.max(4, Math.round(e[key] / maxVal * MAX_H));
       const isCurrent = e.week === ws;
       return `<div class="trend-bar-wrap">
         <div class="trend-val">${e[key]}</div>
-        <div class="trend-bar ${isCurrent ? 'current' : ''}" style="height:${pct}%"></div>
+        <div class="trend-bar ${isCurrent ? 'current' : ''}" style="height:${barH}px"></div>
         <div class="trend-week-lbl">${e.label}</div>
       </div>`;
     }).join('');
+    const note = last4.length < 4
+      ? `<div style="font-size:10px;color:var(--text-tertiary);margin-top:8px">${last4.length}/4 weeks — keeps growing</div>`
+      : '';
+    return `<div class="trend-chart">${bars}</div>${note}`;
   }
 
-  $('trendMtg').innerHTML   = barsHTML('meetings', 10);
-  $('trendDials').innerHTML = barsHTML('dials',    100);
+  $('trendMtg').innerHTML   = chartHTML('meetings', 10);
+  $('trendDials').innerHTML = chartHTML('dials',    200);
 }
 
 // init trend from localStorage
@@ -858,6 +887,10 @@ function renderTasks(listId, key) {
       <button class="task-del" data-i="${i}" data-key="${key}" title="Remove">×</button>`;
     ul.appendChild(li);
   });
+  // update counter badge
+  const remaining = tasks.filter(t => !t.done).length;
+  const countId = key === TODAY_KEY ? 'todayCount' : 'tomorrowCount';
+  setText(countId, tasks.length ? `${remaining} left` : '');
 }
 
 function addTask(inputId, key, listId) {
@@ -900,21 +933,48 @@ $('tomorrowInput').addEventListener('keydown', e => { if (e.key === 'Enter') add
 renderTasks('todayList', TODAY_KEY);
 renderTasks('tomorrowList', TOMORROW_KEY);
 
-// ── Sequence health persistence ───────────────────────────────────
-const SEQ_KEY = 'jarvis_seq_v1';
-const SEQ_FIELDS = ['seqAE','seqME','seqAP','seqMP','seqAW','seqMW'];
+// ── Sequence health: P1 manual persistence + auto-fetch enrolled/added ──
+const SEQ_KEY    = 'jarvis_seq_v1';
+const P1_FIELDS  = ['seqAP','seqMP'];
 
-function loadSeq() {
+function loadSeqManual() {
   const d = loadJSON(SEQ_KEY, {});
-  SEQ_FIELDS.forEach(id => { if ($(id) && d[id] != null) $(id).value = d[id]; });
+  P1_FIELDS.forEach(id => { if ($(id) && d[id] != null) $(id).value = d[id]; });
 }
-function saveSeq() {
-  const d = {};
-  SEQ_FIELDS.forEach(id => { if ($(id)) d[id] = $(id).value; });
+function saveSeqManual() {
+  const d = loadJSON(SEQ_KEY, {});
+  P1_FIELDS.forEach(id => { if ($(id)) d[id] = $(id).value; });
   saveJSON(SEQ_KEY, d);
 }
-SEQ_FIELDS.forEach(id => { const el = $(id); if (el) el.addEventListener('input', saveSeq); });
-loadSeq();
+P1_FIELDS.forEach(id => { const el = $(id); if (el) el.addEventListener('input', saveSeqManual); });
+loadSeqManual();
+
+// Auto-fetch enrolled + added from HubSpot (15 min poll, separate from main)
+let seqSyncing = false, seqCountdown = 10; // first fetch 10s after page load
+
+async function loadSeqHealth() {
+  if (seqSyncing) return;
+  seqSyncing = true;
+  try {
+    const d = await fetch('/api/hubspot?type=contacts').then(async r => {
+      const j = await r.json(); if (!r.ok) throw new Error(j.error); return j;
+    });
+    setText('seqAE', d.anish.enrolled    ?? '—');
+    setText('seqME', d.michelle.enrolled  ?? '—');
+    setText('seqAW', d.anish.added        ?? '—');
+    setText('seqMW', d.michelle.added     ?? '—');
+    setText('seqSyncTime', new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }));
+    seqCountdown = 900; // 15 min
+  } catch (_) {
+    seqCountdown = 300; // retry in 5 min on error
+  }
+  seqSyncing = false;
+}
+
+setInterval(() => {
+  seqCountdown--;
+  if (seqCountdown <= 0) { seqCountdown = 900; loadSeqHealth(); }
+}, 1000);
 
 // ── Settings modal (from original) ───────────────────────────────
 const WATER_KEY = 'po_water_v1';
