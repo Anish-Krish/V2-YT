@@ -745,12 +745,13 @@ function renderDeadlines() {
 renderDeadlines();
 
 // ── Sprint + metrics ──────────────────────────────────────────
-const MICHELLE_CALL_FLOOR='2026-06-10';
 function updateSprints(data) {
   if(!data) return;
+  // Use the floor timestamp the server actually used for Michelle's call query
+  const floorMs = data.meta && data.meta.michFloorMs ? Number(data.meta.michFloorMs) : new Date('2026-06-16T00:00:00').getTime();
   // Dials sprint
   const mDials=data.monthly.michelle.dials;
-  const daysActive=Math.max(1,Math.round((new Date()-new Date(MICHELLE_CALL_FLOOR+'T00:00:00'))/86400000));
+  const daysActive=Math.max(1,Math.round((Date.now()-floorMs)/86400000));
   const avg=mDials/daysActive;
   const dc=avg>=60?'on-track':avg>=45?'at-risk':'off-track';
   const dRow=$('sprintDialsRow'); if(dRow) dRow.className='sprint-card '+dc;
