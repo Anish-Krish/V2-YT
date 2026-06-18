@@ -9,7 +9,6 @@
 <title>Jarvis</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="sync.js" defer></script>
-<script src="topbar.js" defer></script>
 <style>
 :root {
   --cyan:        #00D4FF;
@@ -56,6 +55,12 @@ body::after {
   background: rgba(6,10,15,0.95); border-bottom: 1px solid var(--card-border);
   backdrop-filter: blur(14px); padding: 0 18px; gap: 14px;
 }
+.hamburger {
+  background: none; border: none; cursor: pointer; color: var(--text-tertiary);
+  font-size: 18px; padding: 4px 6px; line-height: 1; flex-shrink: 0;
+  transition: color 0.2s;
+}
+.hamburger:hover { color: var(--cyan); }
 .j-logo { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
 .logo-svg { animation: spin 12s linear infinite; width: 24px; height: 24px; }
 .logo-txt { font-size: 13px; font-weight: 800; letter-spacing: 0.24em; color: var(--cyan); }
@@ -70,35 +75,39 @@ body::after {
 .gear-btn { background: none; border: none; cursor: pointer; color: var(--text-tertiary); font-size: 16px; padding: 4px; transition: color 0.2s; }
 .gear-btn:hover { color: var(--cyan); }
 
-/* ── Body layout: sidebar + main ──────────────────────────────── */
-.body-wrap { display: flex; flex: 1; }
-
-/* Sidebar */
-.j-sidebar {
-  width: 178px; flex-shrink: 0;
-  background: rgba(2,6,12,0.9); border-right: 1px solid var(--card-border);
-  padding: 16px 0; display: flex; flex-direction: column;
-  position: sticky; top: 52px; height: calc(100vh - 52px); overflow-y: auto;
+/* ── Slide-out nav drawer ─────────────────────────────────────── */
+.nav-overlay {
+  display: none; position: fixed; inset: 0; z-index: 30;
+  background: rgba(0,0,0,0.45);
 }
+.nav-overlay.open { display: block; }
+.nav-drawer {
+  position: fixed; top: 52px; left: 0; bottom: 0; width: 200px; z-index: 31;
+  background: rgba(3,7,14,0.98); border-right: 1px solid var(--card-border);
+  backdrop-filter: blur(14px);
+  transform: translateX(-100%); transition: transform 0.22s ease;
+  padding: 20px 0; display: flex; flex-direction: column;
+}
+.nav-drawer.open { transform: translateX(0); }
 .nav-link {
-  display: flex; align-items: center; gap: 10px; padding: 9px 16px;
+  display: block; padding: 11px 20px;
   color: var(--text-tertiary); text-decoration: none;
-  font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
   border-left: 2px solid transparent; transition: all 0.15s;
 }
-.nav-link:hover  { color: var(--cyan); background: rgba(0,212,255,0.05); }
-.nav-link.active { color: var(--cyan); background: rgba(0,212,255,0.07); border-left-color: var(--cyan); }
-.nav-ico { font-size: 13px; width: 15px; text-align: center; flex-shrink: 0; }
-.nav-sep { flex: 1; }
-.nav-hr { margin: 8px 16px; border: 0; border-top: 1px solid var(--card-border); }
+.nav-link:hover  { color: var(--cyan); background: rgba(0,212,255,0.06); }
+.nav-link.active { color: var(--cyan); background: rgba(0,212,255,0.08); border-left-color: var(--cyan); }
+.nav-hr { margin: 10px 20px; border: 0; border-top: 1px solid var(--card-border); }
 
-/* Main scrollable area */
+/* ── Main scrollable area (no sidebar column) ─────────────────── */
+.body-wrap { flex: 1; }
 .j-main {
-  flex: 1; overflow-y: auto; padding: 16px 18px 40px;
+  padding: 16px 20px 40px;
   display: grid;
-  grid-template-columns: 1fr 298px;
+  grid-template-columns: 1fr 316px;
   gap: 14px;
   align-content: start;
+  max-width: 1340px;
 }
 
 /* ── Cards ─────────────────────────────────────────────────────── */
@@ -114,30 +123,34 @@ body::after {
 /* ── Sprint row ────────────────────────────────────────────────── */
 .sprint-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .sprint-card {
-  background: var(--card-bg); border: 1px solid var(--card-border);
-  border-radius: 11px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px;
+  border-radius: 11px; padding: 14px 16px; display: flex; flex-direction: column; gap: 7px;
+  border: 1px solid var(--card-border); background: var(--card-bg);
+  border-left-width: 3px;
 }
-.sprint-top { display: flex; align-items: center; justify-content: space-between; }
-.sprint-name { font-size: 12px; color: var(--text-secondary); font-weight: 600; }
-.sprint-badge { font-size: 10px; font-weight: 800; letter-spacing: 0.07em; padding: 3px 8px; border-radius: 5px; }
-.on-track  { border-color: rgba(0,229,160,0.2); }
-.at-risk   { border-color: rgba(242,192,99,0.2); }
-.off-track { border-color: rgba(248,113,113,0.2); }
-.on-track  .sprint-badge { background: rgba(0,229,160,0.14); color: var(--green); }
-.at-risk   .sprint-badge { background: rgba(242,192,99,0.14); color: var(--amber); }
-.off-track .sprint-badge { background: rgba(248,113,113,0.14); color: var(--red); }
-.sprint-detail { font-size: 11px; color: var(--text-tertiary); }
+.sprint-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sprint-name { font-size: 12px; color: var(--text-primary); font-weight: 700; }
+.sprint-badge {
+  font-size: 11px; font-weight: 800; letter-spacing: 0.08em;
+  padding: 4px 10px; border-radius: 6px; white-space: nowrap; flex-shrink: 0;
+}
+.on-track  { border-left-color: var(--green); background: rgba(0,229,160,0.03); }
+.at-risk   { border-left-color: var(--amber); background: rgba(242,192,99,0.03); }
+.off-track { border-left-color: var(--red);   background: rgba(248,113,113,0.03); }
+.on-track  .sprint-badge { background: rgba(0,229,160,0.16); color: var(--green); }
+.at-risk   .sprint-badge { background: rgba(242,192,99,0.16); color: var(--amber); }
+.off-track .sprint-badge { background: rgba(248,113,113,0.16); color: var(--red); }
+.sprint-detail { font-size: 11px; color: var(--text-secondary); }
 
-/* ── KPI row ───────────────────────────────────────────────────── */
-.kpi-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 0; margin-bottom: 14px; }
-.kpi { text-align: center; padding: 6px 4px; border-right: 1px solid rgba(0,212,255,0.07); }
-.kpi:last-child { border-right: 0; }
-.kpi-val { font-size: 28px; font-weight: 800; color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1; }
+/* ── KPI row ── compact, doesn't stretch to full card width ───── */
+.kpi-row { display: flex; gap: 0; margin-bottom: 14px; }
+.kpi { text-align: center; padding: 6px 20px 6px 0; margin-right: 20px; border-right: 1px solid rgba(0,212,255,0.07); }
+.kpi:last-child { border-right: 0; margin-right: 0; }
+.kpi-val { font-size: 26px; font-weight: 800; color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1; }
 .kpi-val.hi { color: var(--green); }
 .kpi-val.cy { color: var(--cyan); }
-.kpi-sub { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); margin-top: 2px; }
-.kpi-detail { font-size: 10px; color: var(--text-tertiary); margin-top: 3px; }
-.kpi-detail span { color: var(--text-secondary); font-weight: 600; }
+.kpi-sub { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); margin-top: 3px; }
+.kpi-detail { font-size: 10px; color: var(--text-secondary); margin-top: 3px; }
+.kpi-detail span { font-weight: 600; }
 
 /* ── Funnel ────────────────────────────────────────────────────── */
 .funnel-person-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -268,31 +281,40 @@ body::after {
 .dl-unit { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-tertiary); }
 
 /* Kanban */
-.task-list { list-style: none; display: flex; flex-direction: column; gap: 4px; }
-.task-item { display: flex; align-items: center; gap: 7px; padding: 5px 8px; background: rgba(0,212,255,0.025); border: 1px solid rgba(0,212,255,0.07); border-radius: 7px; }
-.task-check { width: 13px; height: 13px; border-radius: 50%; border: 1.5px solid var(--text-tertiary); cursor: pointer; flex-shrink: 0; transition: all 0.2s; }
+.task-list { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+.task-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: rgba(0,212,255,0.04); border: 1px solid rgba(0,212,255,0.09); border-radius: 8px; }
+.task-check { width: 15px; height: 15px; border-radius: 50%; border: 2px solid rgba(0,212,255,0.3); cursor: pointer; flex-shrink: 0; transition: all 0.2s; }
 .task-check.done { background: var(--green); border-color: var(--green); }
-.task-text { flex: 1; font-size: 11px; color: var(--text-secondary); }
-.task-text.done { color: var(--text-tertiary); text-decoration: line-through; }
-.task-del { background: none; border: none; color: var(--text-tertiary); cursor: pointer; font-size: 13px; padding: 0 2px; opacity: 0.4; }
+.task-text { flex: 1; font-size: 12px; color: var(--text-primary); font-weight: 500; }
+.task-text.done { color: var(--text-tertiary); text-decoration: line-through; font-weight: 400; }
+.task-del { background: none; border: none; color: var(--text-tertiary); cursor: pointer; font-size: 14px; padding: 0 2px; opacity: 0.4; }
 .task-del:hover { opacity: 1; color: var(--red); }
-.add-row { display: flex; gap: 5px; margin-top: 7px; }
+.add-row { display: flex; gap: 6px; margin-top: 9px; }
 .t-input {
-  flex: 1; background: rgba(0,212,255,0.04); border: 1px solid var(--card-border);
-  border-radius: 7px; padding: 5px 9px; font-size: 11px; color: var(--text-primary); outline: none; font-family: var(--font);
+  flex: 1; background: rgba(0,212,255,0.05); border: 1px solid var(--card-border);
+  border-radius: 8px; padding: 7px 11px; font-size: 12px; color: var(--text-primary); outline: none; font-family: var(--font);
 }
 .t-input::placeholder { color: var(--text-tertiary); }
-.add-btn { background: rgba(0,212,255,0.08); border: 1px solid var(--card-border); border-radius: 7px; padding: 5px 9px; color: var(--cyan); cursor: pointer; font-size: 13px; font-weight: 700; }
-.focus-card { border-left: 2px solid var(--cyan); }
+.t-input:focus { border-color: rgba(0,212,255,0.3); }
+.add-btn { background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.2); border-radius: 8px; padding: 7px 11px; color: var(--cyan); cursor: pointer; font-size: 14px; font-weight: 700; }
+.focus-card { border-left: 3px solid var(--cyan); }
+.card-label {
+  display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--text-secondary); margin-bottom: 12px;
+}
 .card-sub { font-size: 10px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--text-tertiary); float: right; }
 
+/* Deadline rows */
+.dl-lbl { font-size: 12px; color: var(--text-primary); font-weight: 500; }
+.dl-date { font-size: 10px; color: var(--text-tertiary); margin-top: 1px; }
+
 /* Seq health */
-.seq-tbl { width: 100%; border-collapse: collapse; font-size: 11px; }
-.seq-tbl th { color: var(--text-tertiary); font-size: 9px; font-weight: 700; letter-spacing: 0.06em; padding: 2px 4px; text-align: center; }
+.seq-tbl { width: 100%; border-collapse: collapse; }
+.seq-tbl th { color: var(--text-tertiary); font-size: 10px; font-weight: 700; letter-spacing: 0.06em; padding: 3px 6px; text-align: center; }
 .seq-tbl th:first-child { text-align: left; }
-.seq-tbl td { padding: 5px 4px; border-top: 1px solid rgba(0,212,255,0.06); font-size: 11px; }
-.av { text-align: center; font-weight: 700; color: var(--text-primary); }
-.s-inp { width: 38px; text-align: center; background: rgba(0,212,255,0.05); border: 1px solid var(--card-border); border-radius: 5px; padding: 3px; color: var(--text-primary); font-size: 11px; outline: none; font-family: var(--font); }
+.seq-tbl td { padding: 7px 6px; border-top: 1px solid rgba(0,212,255,0.06); font-size: 12px; color: var(--text-secondary); }
+.av { text-align: center; font-weight: 700; color: var(--text-primary); font-size: 14px; }
+.s-inp { width: 42px; text-align: center; background: rgba(0,212,255,0.05); border: 1px solid var(--card-border); border-radius: 5px; padding: 4px; color: var(--text-primary); font-size: 12px; outline: none; font-family: var(--font); }
 
 /* Error banner */
 .err-banner { display: none; background: rgba(248,113,113,0.09); border: 1px solid rgba(248,113,113,0.22); border-radius: 8px; padding: 7px 12px; font-size: 11px; color: var(--red); margin-bottom: 10px; }
@@ -344,6 +366,7 @@ body::after {
 
   <!-- HEADER -->
   <header class="j-head">
+    <button class="hamburger" id="navToggle" title="Menu">&#9776;</button>
     <div class="j-logo">
       <svg class="logo-svg" viewBox="0 0 24 24" fill="none">
         <circle cx="12" cy="12" r="10.5" stroke="rgba(0,212,255,0.2)" stroke-width="1"/>
@@ -365,17 +388,16 @@ body::after {
 
   <div class="body-wrap">
 
-    <!-- SIDEBAR -->
-    <nav class="j-sidebar">
-      <a class="nav-link active" href="index.html"><span class="nav-ico">⌂</span> Home</a>
-      <a class="nav-link" href="sales.html"><span class="nav-ico">📞</span> Sales</a>
-      <a class="nav-link" href="gym.html"><span class="nav-ico">💪</span> Gym</a>
-      <a class="nav-link" href="health.html"><span class="nav-ico">❤</span> Health</a>
-      <a class="nav-link" href="finance.html"><span class="nav-ico">💰</span> Finance</a>
-      <a class="nav-link" href="nova.html"><span class="nav-ico">🧠</span> Nova</a>
-      <div class="nav-sep"></div>
+    <!-- NAV DRAWER (slide-in overlay) -->
+    <div class="nav-overlay" id="navOverlay"></div>
+    <nav class="nav-drawer" id="navDrawer">
+      <a class="nav-link active" href="index.html">Home</a>
+      <a class="nav-link" href="sales.html">Sales</a>
+      <a class="nav-link" href="gym.html">Gym</a>
+      <a class="nav-link" href="health.html">Health</a>
+      <a class="nav-link" href="finance.html">Finance</a>
       <hr class="nav-hr">
-      <a class="nav-link" href="#" id="settingsOpen2"><span class="nav-ico">⚙</span> Settings</a>
+      <a class="nav-link" href="#" id="settingsOpen2">Settings</a>
     </nav>
 
     <!-- MAIN GRID -->
@@ -869,42 +891,37 @@ async function loadSeqHealth(){
 setInterval(()=>{seqCountdown--;if(seqCountdown<=0){seqCountdown=900;loadSeqHealth();}},1000);
 
 // ── JARVIS Voice + Chat ───────────────────────────────────────
-// Voice setup
 const SpeechRec=window.SpeechRecognition||window.webkitSpeechRecognition;
 const hasSpeech=!!SpeechRec;
-let recognition=null, isListening=false, isSpeaking=false, jBusy=false;
+let recognition=null, isListening=false, jBusy=false;
+// micBlocked: set to true BEFORE stopping recognition so onend never auto-restarts
+// while we're processing or speaking. Cleared only after TTS + buffer.
+let micBlocked=false;
 let silenceTimer=null, finalT='';
 const chatHistory=[];
 
-// Load best TTS voice once browser has them
+// Best TTS voice — loaded async since browser voices aren't ready at startup
 let bestVoice=null;
 function pickBestVoice(){
-  const vv=speechSynthesis.getVoices();
-  // Priority order: Google US English (Chrome) → Samantha/Karen/Daniel (macOS) → Mark (Windows) → any en-US
+  const vv=window.speechSynthesis?speechSynthesis.getVoices():[];
   bestVoice=
-    vv.find(v=>/google us english/i.test(v.name))||
-    vv.find(v=>/samantha/i.test(v.name))||
+    vv.find(v=>/google us english/i.test(v.name))||   // Chrome
+    vv.find(v=>/samantha/i.test(v.name))||             // macOS
     vv.find(v=>/karen/i.test(v.name))||
     vv.find(v=>/daniel/i.test(v.name))||
-    vv.find(v=>/microsoft mark/i.test(v.name))||
+    vv.find(v=>/microsoft mark/i.test(v.name))||       // Windows
     vv.find(v=>/en-us/i.test(v.lang))||
-    vv[0]||null;
+    (vv.length?vv[0]:null);
 }
-if(window.speechSynthesis){
-  speechSynthesis.onvoiceschanged=pickBestVoice;
-  pickBestVoice();
-}
+if(window.speechSynthesis){ speechSynthesis.onvoiceschanged=pickBestVoice; pickBestVoice(); }
 
 if(hasSpeech){
-  $('jwNote').textContent='🎤 to toggle always-listening mode (Chrome + HTTPS)';
+  $('jwNote').textContent='Click mic to toggle always-listening (Chrome + HTTPS)';
   recognition=new SpeechRec();
-  recognition.continuous=true;
-  recognition.interimResults=true;
-  recognition.lang='en-US';
+  recognition.continuous=true; recognition.interimResults=true; recognition.lang='en-US';
 
   recognition.onresult=e=>{
-    // KEY FIX: Ignore any input while JARVIS is speaking — prevents self-conversation
-    if(isSpeaking) return;
+    if(micBlocked) return;  // ignore ALL input while processing or JARVIS is speaking
     let interim='';
     for(let i=e.resultIndex;i<e.results.length;i++){
       if(e.results[i].isFinal) finalT+=e.results[i][0].transcript+' ';
@@ -919,9 +936,9 @@ if(hasSpeech){
       },1500);
     }
   };
-
   recognition.onerror=e=>{ if(e.error==='aborted'||e.error==='no-speech') return; console.warn('Speech:',e.error); };
-  recognition.onend=()=>{ if(isListening&&!isSpeaking){ try{recognition.start();}catch(_){} } };
+  // Only auto-restart if listening AND mic is not blocked (i.e. not processing/speaking)
+  recognition.onend=()=>{ if(isListening&&!micBlocked){ try{recognition.start();}catch(_){} } };
 }else{
   $('jwNote').textContent='Voice not supported — use text input (try Chrome)';
 }
@@ -936,12 +953,13 @@ function setListeningUI(on){
 }
 
 $('jwMic').addEventListener('click',()=>{
-  if(!hasSpeech){alert('Voice recognition requires Chrome browser.');return;}
+  if(!hasSpeech){alert('Voice recognition requires Chrome browser on HTTPS.');return;}
   if(!isListening){
     setListeningUI(true);
     try{recognition.start();}catch(_){}
   }else{
     setListeningUI(false);
+    micBlocked=false;
     try{recognition.stop();}catch(_){}
     clearTimeout(silenceTimer); finalT=''; setText('jwTranscript','');
   }
@@ -958,11 +976,14 @@ function appendChat(role,text){
 async function sendToJarvis(msg){
   if(jBusy||!msg.trim()) return;
   jBusy=true;
+
+  // Block mic FIRST — before recognition.stop() so onend can't restart recognition
+  micBlocked=true;
+  if(recognition) try{recognition.stop();}catch(_){}
+
   $('vDot').className='vdot proc'; setText('vLabel','PROCESSING');
   appendChat('user',msg);
   chatHistory.push({role:'user',content:msg});
-  // Stop mic while processing so recognition.onend doesn't auto-restart mid-thought
-  if(isListening) try{recognition.stop();}catch(_){}
 
   try{
     const r=await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,history:chatHistory.slice(0,-1)})});
@@ -974,34 +995,25 @@ async function sendToJarvis(msg){
     speakReply(reply);
   }catch(e){
     appendChat('jarvis',`Error: ${e.message}`);
-    jBusy=false;
-    if(isListening){$('vDot').className='vdot live';setText('vLabel','LISTENING');try{recognition.start();}catch(_){}}
-    else{$('vDot').className='vdot';setText('vLabel','MUTED');}
+    jBusy=false; micBlocked=false;
+    resumeMic();
   }
 }
 
 function speakReply(text){
-  if(!window.speechSynthesis){ jBusy=false; resumeMic(); return; }
-  // CRITICAL: Flag isSpeaking BEFORE we start so onresult handler ignores mic input
-  isSpeaking=true;
+  if(!window.speechSynthesis){ jBusy=false; micBlocked=false; resumeMic(); return; }
+  // micBlocked is already true — mic cannot fire while we speak
   speechSynthesis.cancel();
-
   const u=new SpeechSynthesisUtterance(text);
   if(bestVoice) u.voice=bestVoice;
-  u.rate=0.96;    // slightly slower = more natural
-  u.pitch=0.97;   // very slightly lower
-  u.volume=1.0;
+  u.rate=0.95; u.pitch=0.97; u.volume=1.0;
 
   u.onend=()=>{
-    isSpeaking=false; jBusy=false;
-    // Wait 600ms AFTER speech ends before re-enabling mic — prevents picking up reverb/room echo
-    setTimeout(resumeMic, 600);
+    jBusy=false;
+    // 800ms buffer after TTS ends — absorbs room reverb before re-enabling mic
+    setTimeout(()=>{ micBlocked=false; resumeMic(); }, 800);
   };
-  u.onerror=()=>{
-    isSpeaking=false; jBusy=false;
-    resumeMic();
-  };
-
+  u.onerror=()=>{ jBusy=false; micBlocked=false; resumeMic(); };
   speechSynthesis.speak(u);
 }
 
@@ -1019,6 +1031,13 @@ function sendText(){const inp=$('jwInput'),msg=inp.value.trim();if(!msg)return;i
 $('jwSend').addEventListener('click',sendText);
 $('jwInput').addEventListener('keydown',e=>{if(e.key==='Enter')sendText();});
 
+// ── Nav drawer toggle ─────────────────────────────────────────
+function openNav()  { $('navDrawer').classList.add('open');  $('navOverlay').classList.add('open'); }
+function closeNav() { $('navDrawer').classList.remove('open'); $('navOverlay').classList.remove('open'); }
+$('navToggle').addEventListener('click', () => $('navDrawer').classList.contains('open') ? closeNav() : openNav());
+$('navOverlay').addEventListener('click', closeNav);
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeNav(); });
+
 // ── Settings modal ────────────────────────────────────────────
 const WATER_KEY='po_water_v1', WHOOP_KEY='whoop_tokens_v1', SYNC_KEY='whoop_last_sync';
 function defaultWater(){return{unit:'bottle',bottleMl:500,glassMl:250,weightUnit:'kg',profile:{weightKg:75,age:25,sex:'m',activityHrsPerWeek:5},caffeineMgPerDay:200,substances:[],logs:{}};}
@@ -1033,7 +1052,7 @@ function saveSettings(){const w=loadJSON(WATER_KEY,defaultWater());w.profile=w.p
 function openSettings(){populate();renderWhoop();$('settingsBg').classList.add('show');syncWhoop();}
 function closeSettings(){$('settingsBg').classList.remove('show');}
 $('settingsOpen').addEventListener('click',openSettings);
-const so2=$('settingsOpen2');if(so2)so2.addEventListener('click',e=>{e.preventDefault();openSettings();});
+const so2=$('settingsOpen2');if(so2)so2.addEventListener('click',e=>{e.preventDefault();closeNav();openSettings();});
 $('settingsClose').addEventListener('click',closeSettings);
 $('settingsBg').addEventListener('click',e=>{if(e.target===$('settingsBg'))closeSettings();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSettings();});
