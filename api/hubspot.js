@@ -41,8 +41,6 @@ const SQL_STAGES = new Set([
 
 // ── Utilities ────────────────────────────────────────────────────
 
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-
 function isoToday()      { return new Date().toISOString().slice(0, 10); }
 function isoMonthStart() {
   const n = new Date();
@@ -123,28 +121,15 @@ async function getAll(token) {
   const dow = new Date().getDay();
   const michelleCutoff = ms > MICHELLE_CALL_FLOOR ? ms : MICHELLE_CALL_FLOOR;
 
-  // Batch 1 — monthly meetings (2 calls)
-  const [anishMtgsM, michelleMtgsM] = await Promise.all([
-    searchMeetings(token, ANISH_ID,    ms, td),
-    searchMeetings(token, MICHELLE_ID, ms, td),
-  ]);
-  await sleep(350);
-
-  // Batch 2 — deals + Anish weekly calls (2 calls)
-  const [deals, anishCalls] = await Promise.all([
-    searchDeals(token, ms),
-    searchCalls(token, ANISH_ID, ws, td),
-  ]);
-  await sleep(350);
-
-  // Batch 3 — Michelle weekly calls + Anish weekly meetings (2 calls)
-  const [michelleCalls, anishMtgsW] = await Promise.all([
-    searchCalls(token, MICHELLE_ID, ws, td),
-    searchMeetings(token, ANISH_ID, ws, td),
-  ]);
-  await sleep(350);
-
-  // Batch 4 — Michelle weekly meetings (1 call)
+  // Fully sequential — one HubSpot search at a time.
+  // HubSpot enforces a per-second rate limit; sequential calls with natural
+  // network latency (~150–300 ms each) stay well under it.
+  const anishMtgsM    = await searchMeetings(token, ANISH_ID,    ms, td);
+  const michelleMtgsM = await searchMeetings(token, MICHELLE_ID, ms, td);
+  const deals         = await searchDeals(token, ms);
+  const anishCalls    = await searchCalls(token, ANISH_ID,    ws, td);
+  const michelleCalls = await searchCalls(token, MICHELLE_ID, ws, td);
+  const anishMtgsW    = await searchMeetings(token, ANISH_ID,    ws, td);
   const michelleMtgsW = await searchMeetings(token, MICHELLE_ID, ws, td);
 
   // ── Process monthly ──────────────────────────────────────────
