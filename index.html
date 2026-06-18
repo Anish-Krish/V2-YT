@@ -482,10 +482,16 @@ body::after {
             </div>
           </div>
           <div class="bar-area" id="barChart"></div>
-          <div style="margin-top:10px">
-            <div id="wFunnelAnish"></div>
+          <div class="funnel-person-row" style="margin-top:10px">
+            <div>
+              <div class="funnel-person-label">Anish</div>
+              <div id="wFunnelAnish"></div>
+            </div>
+            <div>
+              <div class="funnel-person-label">Michelle</div>
+              <div id="wFunnelMichelle"></div>
+            </div>
           </div>
-          <div style="display:none" id="wFunnelMichelle"></div>
         </div>
 
         <!-- Rolling trend -->
@@ -829,7 +835,7 @@ renderTrend(loadJSON(TREND_KEY,[]));
 
 // ── Monthly / Weekly render ───────────────────────────────────
 function renderMonthly(d) { renderFunnel('mFunnelAnish',d.anish); renderFunnel('mFunnelMichelle',d.michelle); }
-function renderWeekly(d)  { renderBarChart(d.byDay); renderFunnel('wFunnelAnish',d.anish); renderFunnel('wFunnelMichelle',d.michelle); }
+function renderWeekly(d)  { renderBarChart(d.byDay); renderFunnel('wFunnelAnish',d.anish); if(d.michelle.dials>0) renderFunnel('wFunnelMichelle',d.michelle); }
 
 // ── HubSpot sync ──────────────────────────────────────────────
 let syncing=false, countdown=300, hsData=null;
@@ -913,20 +919,35 @@ let micBlocked=false;
 let silenceTimer=null, finalT='';
 const chatHistory=[];
 
-// Best TTS voice — loaded async since browser voices aren't ready at startup
+// Best TTS voice — async because browsers load voices lazily.
+// Priority: Edge neural "Online (Natural)" voices >> Google US English >> others.
+// Edge neural voices (Aria, Davis, Guy, Jenny) sound genuinely human on Win 11.
 let bestVoice=null;
 function pickBestVoice(){
   const vv=window.speechSynthesis?speechSynthesis.getVoices():[];
+  if(!vv.length) return;
+  // Prefer specific Edge neural voices by name (all sound human)
+  const edgeNeural=['Aria','Davis','Guy','Jenny','Ryan','Ana'];
+  for(const name of edgeNeural){
+    const v=vv.find(v=>v.name.includes(name)&&v.name.includes('Natural'));
+    if(v){ bestVoice=v; return; }
+  }
+  // Fallback priority
   bestVoice=
-    vv.find(v=>/google us english/i.test(v.name))||   // Chrome
-    vv.find(v=>/samantha/i.test(v.name))||             // macOS
+    vv.find(v=>/google us english/i.test(v.name))||
+    vv.find(v=>/samantha/i.test(v.name))||
     vv.find(v=>/karen/i.test(v.name))||
-    vv.find(v=>/daniel/i.test(v.name))||
-    vv.find(v=>/microsoft mark/i.test(v.name))||       // Windows
-    vv.find(v=>/en-us/i.test(v.lang))||
-    (vv.length?vv[0]:null);
+    vv.find(v=>/en-US/i.test(v.lang)&&v.localService===false)|| // any cloud voice
+    vv.find(v=>/en-US/i.test(v.lang))||
+    vv[0]||null;
 }
-if(window.speechSynthesis){ speechSynthesis.onvoiceschanged=pickBestVoice; pickBestVoice(); }
+if(window.speechSynthesis){
+  speechSynthesis.onvoiceschanged=pickBestVoice;
+  // Retry a few times — some browsers fire onvoiceschanged late or not at all
+  pickBestVoice();
+  setTimeout(pickBestVoice,500);
+  setTimeout(pickBestVoice,1500);
+}
 
 if(hasSpeech){
   $('jwNote').textContent='Click mic to toggle always-listening (Chrome + HTTPS)';

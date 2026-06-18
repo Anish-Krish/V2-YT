@@ -114,7 +114,9 @@ async function getAll(token) {
   const wMs  = msWeekStart();
   const dow  = new Date().getDay();
   // Michelle's floor: whichever is later — month start or MICHELLE_CALL_FLOOR
-  const michFloorMs = String(Math.max(Number(mMs), new Date(MICHELLE_CALL_FLOOR).getTime()));
+  // NOTE: new Date('2026-06-16') parses as UTC midnight = June 15 8 PM ET.
+  // Append T00:00:00 (no Z) so it's parsed as local midnight instead.
+  const michFloorMs = String(Math.max(Number(mMs), new Date(MICHELLE_CALL_FLOOR + 'T00:00:00').getTime()));
 
   const w = ms2 => new Promise(r => setTimeout(r, ms2));
 
