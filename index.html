@@ -11,17 +11,14 @@
 <script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
 <style>
-/* ── Variables ───────────────────────────────────────────────── */
 :root {
   --cyan:        #00D4FF;
-  --cyan-dim:    rgba(0,212,255,0.14);
-  --cyan-border: rgba(0,212,255,0.18);
+  --card-bg:     rgba(0,212,255,0.028);
+  --card-border: rgba(0,212,255,0.10);
   --bg:          #060A0F;
-  --card-bg:     rgba(0,212,255,0.03);
-  --card-border: rgba(0,212,255,0.11);
   --text-primary:   #DFF0FF;
   --text-secondary: #5E8BA8;
-  --text-tertiary:  #2E546A;
+  --text-tertiary:  #2B4F65;
   --green:  #00E5A0;
   --amber:  #F2C063;
   --orange: #FB923C;
@@ -30,224 +27,238 @@
   --font:      -apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif;
   --font-mono: ui-monospace,"SF Mono",Menlo,Consolas,monospace;
 }
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text-secondary); font-family: var(--font); -webkit-font-smoothing: antialiased; }
-
-/* dot grid background */
-body::after {
-  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
-  background-image:
-    linear-gradient(rgba(0,212,255,0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,212,255,0.035) 1px, transparent 1px);
-  background-size: 44px 44px;
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; }
+body {
+  min-height: 100%; background: var(--bg); color: var(--text-secondary);
+  font-family: var(--font); -webkit-font-smoothing: antialiased;
 }
+/* grid background */
 body::before {
   content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
-  background: radial-gradient(circle at 50% 25%, rgba(0,212,255,0.05) 0%, transparent 55%);
+  background-image:
+    linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+body::after {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background: radial-gradient(circle at 75% 10%, rgba(0,212,255,0.05) 0%, transparent 50%);
 }
 
-/* ── Layout shell ────────────────────────────────────────────── */
-.shell {
-  position: fixed; inset: 0; z-index: 1;
-  display: grid;
-  grid-template-columns: 188px 1fr 308px;
-  grid-template-rows: 52px 1fr;
-}
+/* ── Page wrapper ──────────────────────────────────────────────── */
+.page { position: relative; z-index: 1; display: flex; flex-direction: column; min-height: 100vh; }
 
-/* ── Header ──────────────────────────────────────────────────── */
+/* ── Header ────────────────────────────────────────────────────── */
 .j-head {
-  grid-column: 1 / -1;
-  display: flex; align-items: center;
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; height: 52px;
   background: rgba(6,10,15,0.95); border-bottom: 1px solid var(--card-border);
-  backdrop-filter: blur(14px); padding: 0 0 0 0; z-index: 20;
+  backdrop-filter: blur(14px); padding: 0 18px; gap: 14px;
 }
-.head-logo {
-  width: 188px; padding: 0 18px; flex-shrink: 0;
-  display: flex; align-items: center; gap: 10px;
-  border-right: 1px solid var(--card-border); height: 100%;
-}
-.logo-ring-wrap { width: 26px; height: 26px; position: relative; }
-.logo-ring-wrap svg { animation: spin 10s linear infinite; width: 26px; height: 26px; }
-.logo-text { font-size: 13px; font-weight: 800; letter-spacing: 0.25em; color: var(--cyan); }
-.head-center { flex: 1; padding: 0 20px; }
-.head-greeting { font-size: 13px; color: var(--text-secondary); }
+.j-logo { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
+.logo-svg { animation: spin 12s linear infinite; width: 24px; height: 24px; }
+.logo-txt { font-size: 13px; font-weight: 800; letter-spacing: 0.24em; color: var(--cyan); }
+.head-divider { width: 1px; height: 22px; background: var(--card-border); flex-shrink: 0; }
+.head-greeting { font-size: 13px; color: var(--text-secondary); flex: 1; }
 .head-greeting strong { color: var(--text-primary); font-weight: 600; }
-.head-right {
-  display: flex; align-items: center; gap: 14px; padding: 0 16px;
-  border-left: 1px solid var(--card-border); height: 100%; flex-shrink: 0;
-}
-.sys-online { display: flex; align-items: center; gap: 6px; font-size: 11px; letter-spacing: 0.08em; color: var(--text-secondary); }
+.head-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.sys-pill { display: flex; align-items: center; gap: 5px; font-size: 10px; letter-spacing: 0.1em; color: var(--text-secondary); }
 .sys-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
 .head-time { font-size: 12px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 .sync-badge { font-size: 11px; color: var(--text-tertiary); }
-.gear-btn { background: none; border: none; cursor: pointer; padding: 4px 6px; color: var(--text-tertiary); font-size: 16px; transition: color 0.2s; }
+.gear-btn { background: none; border: none; cursor: pointer; color: var(--text-tertiary); font-size: 16px; padding: 4px; transition: color 0.2s; }
 .gear-btn:hover { color: var(--cyan); }
 
-/* ── Sidebar ─────────────────────────────────────────────────── */
+/* ── Body layout: sidebar + main ──────────────────────────────── */
+.body-wrap { display: flex; flex: 1; }
+
+/* Sidebar */
 .j-sidebar {
-  grid-column: 1; grid-row: 2;
+  width: 178px; flex-shrink: 0;
   background: rgba(2,6,12,0.9); border-right: 1px solid var(--card-border);
-  padding: 18px 0; display: flex; flex-direction: column; overflow: hidden;
+  padding: 16px 0; display: flex; flex-direction: column;
+  position: sticky; top: 52px; height: calc(100vh - 52px); overflow-y: auto;
 }
 .nav-link {
-  display: flex; align-items: center; gap: 11px;
-  padding: 10px 18px;
+  display: flex; align-items: center; gap: 10px; padding: 9px 16px;
   color: var(--text-tertiary); text-decoration: none;
-  font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase;
   border-left: 2px solid transparent; transition: all 0.15s;
 }
 .nav-link:hover  { color: var(--cyan); background: rgba(0,212,255,0.05); }
-.nav-link.active { color: var(--cyan); background: rgba(0,212,255,0.08); border-left-color: var(--cyan); }
-.nav-icon { font-size: 14px; width: 16px; text-align: center; flex-shrink: 0; }
+.nav-link.active { color: var(--cyan); background: rgba(0,212,255,0.07); border-left-color: var(--cyan); }
+.nav-ico { font-size: 13px; width: 15px; text-align: center; flex-shrink: 0; }
 .nav-sep { flex: 1; }
-.nav-hr { margin: 8px 18px; border: 0; border-top: 1px solid var(--card-border); }
+.nav-hr { margin: 8px 16px; border: 0; border-top: 1px solid var(--card-border); }
 
-/* ── Center ──────────────────────────────────────────────────── */
-.j-center {
-  grid-column: 2; grid-row: 2;
-  display: flex; flex-direction: column; align-items: center;
-  padding: 20px 20px 14px; overflow: hidden; position: relative;
+/* Main scrollable area */
+.j-main {
+  flex: 1; overflow-y: auto; padding: 16px 18px 40px;
+  display: grid;
+  grid-template-columns: 1fr 298px;
+  gap: 14px;
+  align-content: start;
 }
 
-/* Circular animation */
-.j-arc-wrap {
-  position: relative; width: 220px; height: 220px; flex-shrink: 0; margin-bottom: 16px;
+/* ── Cards ─────────────────────────────────────────────────────── */
+.card {
+  background: var(--card-bg); border: 1px solid var(--card-border);
+  border-radius: 11px; padding: 14px 14px 12px;
 }
-.arc { position: absolute; border-radius: 50%; }
-.arc-1 { inset: 0;   border: 1px  solid transparent; border-top-color: var(--cyan); border-right-color: rgba(0,212,255,0.3); animation: spin 5s linear infinite; }
-.arc-2 { inset: 18px; border: 1.5px solid transparent; border-bottom-color: rgba(0,212,255,0.75); border-left-color: rgba(0,212,255,0.2); animation: spin-r 8s linear infinite; }
-.arc-3 { inset: 34px; border: 1px  solid transparent; border-top-color: rgba(0,212,255,0.45); border-right-color: rgba(0,212,255,0.6); animation: spin 13s linear infinite; }
-.arc-4 { inset: 50px; border: 1px  solid transparent; border-bottom-color: rgba(0,212,255,0.25); animation: spin-r 19s linear infinite; }
-.arc-glow {
-  inset: 66px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(0,212,255,0.18) 0%, rgba(0,212,255,0.04) 60%, transparent 80%);
-  animation: pglow 3s ease-in-out infinite;
+.card-label {
+  display: block; font-size: 9px; font-weight: 700; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 12px;
 }
-.arc-core {
-  inset: 82px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(0,212,255,0.28) 0%, rgba(0,212,255,0.06) 55%, transparent);
-  animation: pglow 2.2s ease-in-out infinite alternate;
-  display: flex; align-items: center; justify-content: center;
+
+/* ── Sprint row ────────────────────────────────────────────────── */
+.sprint-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sprint-card {
+  background: var(--card-bg); border: 1px solid var(--card-border);
+  border-radius: 11px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px;
 }
-.arc-letter { font-size: 15px; font-weight: 800; letter-spacing: 0.2em; color: var(--cyan); text-shadow: 0 0 18px rgba(0,212,255,0.9); }
-
-/* listening state — rings accelerate + glow brighter */
-.j-arc-wrap.listening .arc-1 { animation-duration: 2s; border-width: 2px; }
-.j-arc-wrap.listening .arc-2 { animation-duration: 3.5s; border-width: 2px; }
-.j-arc-wrap.listening .arc-glow { background: radial-gradient(circle, rgba(0,212,255,0.32) 0%, rgba(0,212,255,0.08) 60%, transparent 80%); }
-
-/* Voice status */
-.j-voice-info { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 14px; }
-.voice-status-row { display: flex; align-items: center; gap: 6px; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-tertiary); }
-.vdot { width: 5px; height: 5px; border-radius: 50%; background: var(--text-tertiary); }
-.vdot.live { background: var(--cyan); box-shadow: 0 0 7px var(--cyan); animation: blink 1.2s step-start infinite; }
-.vdot.proc { background: var(--amber); box-shadow: 0 0 7px var(--amber); animation: blink 0.5s step-start infinite; }
-@keyframes blink { 50% { opacity: 0; } }
-
-.j-wave { display: flex; align-items: center; gap: 3px; height: 22px; opacity: 0; transition: opacity 0.3s; }
-.j-wave.on { opacity: 1; }
-.wb { width: 3px; border-radius: 2px; background: var(--cyan); animation: wave 0.8s ease-in-out infinite; }
-.wb:nth-child(1){animation-delay:0s;   animation-duration:0.62s}
-.wb:nth-child(2){animation-delay:.09s; animation-duration:0.70s}
-.wb:nth-child(3){animation-delay:.18s; animation-duration:0.55s}
-.wb:nth-child(4){animation-delay:.27s; animation-duration:0.80s}
-.wb:nth-child(5){animation-delay:.36s; animation-duration:0.65s}
-.wb:nth-child(6){animation-delay:.18s; animation-duration:0.73s}
-.wb:nth-child(7){animation-delay:.09s; animation-duration:0.60s}
-.wb:nth-child(8){animation-delay:0s;   animation-duration:0.68s}
-@keyframes wave { 0%,100%{height:3px} 50%{height:20px} }
-
-/* Chat area */
-.j-chat {
-  flex: 1; width: 100%; max-width: 520px;
-  overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 4px 0;
-  min-height: 0;
-}
-.j-chat::-webkit-scrollbar { width: 3px; }
-.j-chat::-webkit-scrollbar-thumb { background: var(--card-border); border-radius: 2px; }
-.chat-msg { display: flex; flex-direction: column; gap: 2px; max-width: 88%; }
-.chat-msg.user   { align-self: flex-end; align-items: flex-end; }
-.chat-msg.jarvis { align-self: flex-start; align-items: flex-start; }
-.chat-who { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); padding: 0 4px; }
-.chat-bubble { padding: 8px 13px; border-radius: 12px; font-size: 13px; line-height: 1.55; }
-.chat-msg.user   .chat-bubble { background: rgba(0,212,255,0.13); border: 1px solid rgba(0,212,255,0.22); color: var(--text-primary); }
-.chat-msg.jarvis .chat-bubble { background: rgba(255,255,255,0.035); border: 1px solid var(--card-border); color: var(--text-secondary); }
-.chat-empty { color: var(--text-tertiary); font-size: 12px; text-align: center; padding: 20px 0; opacity: 0.7; }
-
-/* Live transcript strip */
-.j-transcript { min-height: 16px; font-size: 12px; color: var(--text-tertiary); font-style: italic; text-align: center; max-width: 520px; width: 100%; margin-bottom: 4px; }
-
-/* Input row */
-.j-input-row { width: 100%; max-width: 520px; display: flex; align-items: center; gap: 8px; margin-top: 8px; }
-.j-input {
-  flex: 1; background: rgba(0,212,255,0.05); border: 1px solid var(--card-border);
-  border-radius: 22px; padding: 9px 18px; color: var(--text-primary); font-family: var(--font); font-size: 13px; outline: none;
-  transition: border-color 0.2s;
-}
-.j-input::placeholder { color: var(--text-tertiary); }
-.j-input:focus { border-color: rgba(0,212,255,0.35); background: rgba(0,212,255,0.07); }
-.j-send {
-  width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--card-border);
-  background: rgba(0,212,255,0.08); color: var(--cyan); cursor: pointer; font-size: 13px;
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s;
-}
-.j-send:hover { background: rgba(0,212,255,0.18); }
-.j-mic {
-  width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--card-border);
-  background: rgba(0,212,255,0.06); color: var(--text-tertiary); cursor: pointer; font-size: 14px;
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s;
-}
-.j-mic.on { background: rgba(0,212,255,0.18); border-color: var(--cyan); color: var(--cyan); animation: mic-pulse 2s ease-in-out infinite; }
-@keyframes mic-pulse { 0%,100%{box-shadow:0 0 8px rgba(0,212,255,0.25)} 50%{box-shadow:0 0 22px rgba(0,212,255,0.55)} }
-
-.voice-note { font-size: 10px; color: var(--text-tertiary); text-align: center; margin-top: 4px; max-width: 520px; width: 100%; }
-
-/* ── Right panel ─────────────────────────────────────────────── */
-.j-right {
-  grid-column: 3; grid-row: 2;
-  border-left: 1px solid var(--card-border);
-  overflow-y: auto; padding: 14px 12px;
-  display: flex; flex-direction: column; gap: 10px;
-}
-.j-right::-webkit-scrollbar { width: 3px; }
-.j-right::-webkit-scrollbar-thumb { background: var(--card-border); border-radius: 2px; }
-
-.jc { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; padding: 12px 12px 10px; }
-.jc-title {
-  font-size: 9px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-tertiary);
-  margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;
-}
-.jc-sub { font-size: 10px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--text-tertiary); }
-
-/* Sprint badges */
-.sprint-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 7px 0; border-bottom: 1px solid rgba(0,212,255,0.06); }
-.sprint-row:last-child { border-bottom: 0; }
-.sprint-name { font-size: 11px; color: var(--text-secondary); margin-bottom: 2px; }
-.sprint-detail { font-size: 10px; color: var(--text-tertiary); }
-.sprint-badge { font-size: 9px; font-weight: 700; letter-spacing: 0.08em; padding: 2px 7px; border-radius: 4px; white-space: nowrap; }
+.sprint-top { display: flex; align-items: center; justify-content: space-between; }
+.sprint-name { font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+.sprint-badge { font-size: 10px; font-weight: 800; letter-spacing: 0.07em; padding: 3px 8px; border-radius: 5px; }
+.on-track  { border-color: rgba(0,229,160,0.2); }
+.at-risk   { border-color: rgba(242,192,99,0.2); }
+.off-track { border-color: rgba(248,113,113,0.2); }
 .on-track  .sprint-badge { background: rgba(0,229,160,0.14); color: var(--green); }
 .at-risk   .sprint-badge { background: rgba(242,192,99,0.14); color: var(--amber); }
 .off-track .sprint-badge { background: rgba(248,113,113,0.14); color: var(--red); }
+.sprint-detail { font-size: 11px; color: var(--text-tertiary); }
 
-/* Week metrics */
-.wm-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(0,212,255,0.06); }
-.wm-row:last-child { border-bottom: 0; }
-.wm-lbl { font-size: 11px; color: var(--text-secondary); }
-.wm-right { text-align: right; }
-.wm-val { font-size: 16px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1; }
-.wm-val.cyan  { color: var(--cyan); }
-.wm-val.green { color: var(--green); }
-.wm-note { font-size: 10px; color: var(--text-tertiary); }
-.prog-wrap { margin-top: 5px; }
-.prog-track { height: 3px; background: rgba(0,212,255,0.08); border-radius: 2px; }
-.prog-fill  { height: 100%; border-radius: 2px; background: var(--cyan); transition: width 0.5s; }
-.prog-fill.g { background: var(--green); }
+/* ── KPI row ───────────────────────────────────────────────────── */
+.kpi-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 0; margin-bottom: 14px; }
+.kpi { text-align: center; padding: 6px 4px; border-right: 1px solid rgba(0,212,255,0.07); }
+.kpi:last-child { border-right: 0; }
+.kpi-val { font-size: 28px; font-weight: 800; color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1; }
+.kpi-val.hi { color: var(--green); }
+.kpi-val.cy { color: var(--cyan); }
+.kpi-sub { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); margin-top: 2px; }
+.kpi-detail { font-size: 10px; color: var(--text-tertiary); margin-top: 3px; }
+.kpi-detail span { color: var(--text-secondary); font-weight: 600; }
 
+/* ── Funnel ────────────────────────────────────────────────────── */
+.funnel-person-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.funnel-person-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; color: var(--text-tertiary); text-transform: uppercase; margin-bottom: 8px; }
+.funnel-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.funnel-label { font-size: 11px; color: var(--text-secondary); width: 80px; flex-shrink: 0; }
+.funnel-track { flex: 1; height: 6px; background: rgba(0,212,255,0.07); border-radius: 3px; }
+.funnel-fill { height: 100%; border-radius: 3px; transition: width 0.5s; }
+.funnel-num { font-size: 11px; font-weight: 700; color: var(--text-primary); width: 28px; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ── Bar chart ─────────────────────────────────────────────────── */
+.bar-area { display: flex; align-items: flex-end; gap: 10px; height: 76px; margin-bottom: 12px; }
+.bar-day { display: flex; flex-direction: column; align-items: center; flex: 1; gap: 2px; }
+.bar-group { display: flex; gap: 3px; align-items: flex-end; }
+.bar-col { width: 12px; border-radius: 3px 3px 0 0; transition: height 0.4s; }
+.bar-col.anish    { background: var(--cyan); }
+.bar-col.michelle { background: rgba(0,212,255,0.35); }
+.bar-nums { font-size: 9px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+.bar-lbl  { font-size: 9px; color: var(--text-tertiary); }
+.bar-legend { display: flex; gap: 14px; margin-bottom: 10px; }
+.legend-dot { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+.legend-txt { font-size: 10px; color: var(--text-secondary); }
+
+/* Weekly stats row */
+.wk-stat-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; margin-bottom: 12px; }
+.wk-stat { background: rgba(0,212,255,0.04); border: 1px solid rgba(0,212,255,0.07); border-radius: 7px; padding: 7px 10px; }
+.wk-stat-val { font-size: 20px; font-weight: 800; color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1; }
+.wk-stat-lbl { font-size: 9px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
+
+/* ── Rolling trend ─────────────────────────────────────────────── */
+.trend-section { margin-bottom: 14px; }
+.trend-section-lbl { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 10px; }
+.trend-chart { display: flex; align-items: flex-end; gap: 10px; }
+.trend-bar-wrap { display: flex; flex-direction: column; align-items: center; flex: 1; gap: 4px; }
+.trend-val { font-size: 12px; font-weight: 700; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.trend-bar { width: 100%; border-radius: 4px 4px 0 0; background: rgba(255,255,255,0.08); transition: height 0.5s; }
+.trend-bar.current { background: var(--cyan); box-shadow: 0 0 10px rgba(0,212,255,0.3); }
+.trend-wk { font-size: 9px; color: var(--text-tertiary); text-align: center; }
+
+/* ── JARVIS widget ─────────────────────────────────────────────── */
+.jarvis-widget {
+  background: var(--card-bg); border: 1px solid rgba(0,212,255,0.2);
+  border-radius: 11px; padding: 14px;
+  box-shadow: 0 0 30px rgba(0,212,255,0.05);
+}
+.jw-top { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
+/* Compact circular animation */
+.jw-arc-wrap { position: relative; width: 80px; height: 80px; flex-shrink: 0; }
+.jw-arc { position: absolute; border-radius: 50%; }
+.jw-arc-1 { inset:0;    border:1px solid transparent; border-top-color:var(--cyan); border-right-color:rgba(0,212,255,0.3); animation:spin 5s linear infinite; }
+.jw-arc-2 { inset:11px; border:1.5px solid transparent; border-bottom-color:rgba(0,212,255,0.7); animation:spin-r 8s linear infinite; }
+.jw-arc-3 { inset:22px; border:1px solid transparent; border-top-color:rgba(0,212,255,0.5); animation:spin 13s linear infinite; }
+.jw-arc-core { inset:33px; border-radius:50%; background:radial-gradient(circle,rgba(0,212,255,0.25),rgba(0,212,255,0.04) 70%,transparent); animation:pglow 2.5s ease-in-out infinite; }
+.jw-arc-center { inset:42px; border-radius:50%; background:var(--cyan); box-shadow:0 0 12px rgba(0,212,255,0.8); animation:pglow 2s ease-in-out infinite alternate; }
+
+/* Listening: rings speed up */
+.jw-arc-wrap.listening .jw-arc-1 { animation-duration:2s; border-width:2px; }
+.jw-arc-wrap.listening .jw-arc-2 { animation-duration:3s; border-width:2px; }
+.jw-arc-wrap.listening .jw-arc-core { background:radial-gradient(circle,rgba(0,212,255,0.4),rgba(0,212,255,0.08) 70%,transparent); }
+
+.jw-info { flex:1; }
+.jw-title { font-size: 13px; font-weight: 800; letter-spacing: 0.16em; color: var(--cyan); margin-bottom: 6px; }
+.jw-status { display: flex; align-items: center; gap: 6px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 8px; }
+.vdot { width: 5px; height: 5px; border-radius: 50%; background: var(--text-tertiary); flex-shrink: 0; }
+.vdot.live { background: var(--cyan); box-shadow: 0 0 6px var(--cyan); animation: blink 1.2s step-start infinite; }
+.vdot.proc { background: var(--amber); box-shadow: 0 0 6px var(--amber); animation: blink 0.5s step-start infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+/* Waveform */
+.jw-wave { display: flex; align-items: center; gap: 2px; height: 16px; opacity: 0; transition: opacity 0.3s; }
+.jw-wave.on { opacity: 1; }
+.wb { width: 3px; border-radius: 2px; background: var(--cyan); animation: wave 0.8s ease-in-out infinite; }
+.wb:nth-child(1){animation-delay:0s;    animation-duration:0.62s}
+.wb:nth-child(2){animation-delay:.09s;  animation-duration:0.70s}
+.wb:nth-child(3){animation-delay:.18s;  animation-duration:0.56s}
+.wb:nth-child(4){animation-delay:.27s;  animation-duration:0.78s}
+.wb:nth-child(5){animation-delay:.18s;  animation-duration:0.65s}
+.wb:nth-child(6){animation-delay:.09s;  animation-duration:0.60s}
+@keyframes wave { 0%,100%{height:3px} 50%{height:14px} }
+
+/* Chat area (compact) */
+.jw-chat {
+  max-height: 160px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px;
+}
+.jw-chat::-webkit-scrollbar { width: 3px; }
+.jw-chat::-webkit-scrollbar-thumb { background: var(--card-border); border-radius: 2px; }
+.chat-msg { display: flex; flex-direction: column; gap: 1px; max-width: 90%; }
+.chat-msg.user   { align-self: flex-end; align-items: flex-end; }
+.chat-msg.jarvis { align-self: flex-start; align-items: flex-start; }
+.chat-who { font-size: 9px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--text-tertiary); padding: 0 3px; }
+.chat-bubble { padding: 6px 10px; border-radius: 10px; font-size: 12px; line-height: 1.5; }
+.chat-msg.user   .chat-bubble { background: rgba(0,212,255,0.12); border: 1px solid rgba(0,212,255,0.2); color: var(--text-primary); }
+.chat-msg.jarvis .chat-bubble { background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); color: var(--text-secondary); }
+.chat-empty { font-size: 11px; color: var(--text-tertiary); text-align: center; padding: 10px 0; }
+.jw-transcript { font-size: 11px; color: var(--text-tertiary); font-style: italic; min-height: 14px; margin-bottom: 6px; }
+/* Input */
+.jw-input-row { display: flex; gap: 6px; }
+.jw-input {
+  flex: 1; background: rgba(0,212,255,0.05); border: 1px solid var(--card-border);
+  border-radius: 20px; padding: 7px 14px; color: var(--text-primary);
+  font-family: var(--font); font-size: 12px; outline: none; transition: border-color 0.2s;
+}
+.jw-input::placeholder { color: var(--text-tertiary); }
+.jw-input:focus { border-color: rgba(0,212,255,0.3); }
+.jw-send, .jw-mic {
+  width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--card-border);
+  cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  transition: all 0.2s;
+}
+.jw-send { background: rgba(0,212,255,0.08); color: var(--cyan); }
+.jw-send:hover { background: rgba(0,212,255,0.18); }
+.jw-mic  { background: rgba(0,212,255,0.05); color: var(--text-tertiary); }
+.jw-mic.on { background: rgba(0,212,255,0.18); border-color: var(--cyan); color: var(--cyan); animation: mic-pulse 2s ease-in-out infinite; }
+@keyframes mic-pulse { 0%,100%{box-shadow:0 0 6px rgba(0,212,255,0.2)} 50%{box-shadow:0 0 18px rgba(0,212,255,0.5)} }
+.jw-note { font-size: 10px; color: var(--text-tertiary); text-align: center; margin-top: 5px; }
+
+/* ── Right column cards ─────────────────────────────────────────── */
 /* Deadline card */
-.dl-jcard { border-color: rgba(251,146,60,0.18); background: rgba(251,146,60,0.04); }
-.dl-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid rgba(251,146,60,0.08); }
+.deadline-card { border-color: rgba(251,146,60,0.2); background: rgba(251,146,60,0.03); }
+.dl-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid rgba(251,146,60,0.07); }
 .dl-row:last-child { border-bottom: 0; }
-.dl-name { font-size: 11px; color: var(--text-secondary); }
+.dl-lbl { font-size: 11px; color: var(--text-secondary); }
 .dl-date { font-size: 10px; color: var(--text-tertiary); }
 .dl-badge { text-align: right; }
 .dl-num { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
@@ -272,26 +283,27 @@ body::before {
 }
 .t-input::placeholder { color: var(--text-tertiary); }
 .add-btn { background: rgba(0,212,255,0.08); border: 1px solid var(--card-border); border-radius: 7px; padding: 5px 9px; color: var(--cyan); cursor: pointer; font-size: 13px; font-weight: 700; }
+.focus-card { border-left: 2px solid var(--cyan); }
+.card-sub { font-size: 10px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--text-tertiary); float: right; }
 
 /* Seq health */
 .seq-tbl { width: 100%; border-collapse: collapse; font-size: 11px; }
 .seq-tbl th { color: var(--text-tertiary); font-size: 9px; font-weight: 700; letter-spacing: 0.06em; padding: 2px 4px; text-align: center; }
 .seq-tbl th:first-child { text-align: left; }
-.seq-tbl td { padding: 5px 4px; border-top: 1px solid rgba(0,212,255,0.06); color: var(--text-secondary); font-size: 11px; }
-.seq-tbl td:first-child { font-size: 10px; }
+.seq-tbl td { padding: 5px 4px; border-top: 1px solid rgba(0,212,255,0.06); font-size: 11px; }
 .av { text-align: center; font-weight: 700; color: var(--text-primary); }
 .s-inp { width: 38px; text-align: center; background: rgba(0,212,255,0.05); border: 1px solid var(--card-border); border-radius: 5px; padding: 3px; color: var(--text-primary); font-size: 11px; outline: none; font-family: var(--font); }
 
 /* Error banner */
-.err-banner { display: none; background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.25); border-radius: 8px; padding: 7px 12px; font-size: 11px; color: var(--red); margin-bottom: 8px; }
+.err-banner { display: none; background: rgba(248,113,113,0.09); border: 1px solid rgba(248,113,113,0.22); border-radius: 8px; padding: 7px 12px; font-size: 11px; color: var(--red); margin-bottom: 10px; }
 .err-banner.show { display: block; }
 
 /* Keyframes */
 @keyframes spin   { to { transform: rotate( 360deg); } }
 @keyframes spin-r { to { transform: rotate(-360deg); } }
-@keyframes pglow  { 0%,100%{opacity:.65} 50%{opacity:1} }
+@keyframes pglow  { 0%,100%{opacity:.6} 50%{opacity:1} }
 
-/* ── Settings Modal ──────────────────────────────────────────── */
+/* ── Settings modal ─────────────────────────────────────────────── */
 .settings-bg {
   display: none; position: fixed; inset: 0; z-index: 100;
   background: rgba(0,0,0,0.75); backdrop-filter: blur(8px);
@@ -313,253 +325,280 @@ body::before {
 .set-field { flex: 1; background: rgba(0,212,255,0.05); border: 1px solid var(--card-border); border-radius: 7px; padding: 7px 10px; color: var(--text-primary); font-size: 12px; outline: none; font-family: var(--font); }
 .set-field:focus { border-color: rgba(0,212,255,0.35); }
 .seg-wrap { display: flex; gap: 4px; }
-.seg-btn { flex: 1; background: rgba(0,212,255,0.04); border: 1px solid var(--card-border); border-radius: 6px; padding: 5px; font-size: 11px; color: var(--text-tertiary); cursor: pointer; transition: all 0.15s; }
+.seg-btn { flex: 1; background: rgba(0,212,255,0.04); border: 1px solid var(--card-border); border-radius: 6px; padding: 5px; font-size: 11px; color: var(--text-tertiary); cursor: pointer; }
 .seg-btn.on { background: rgba(0,212,255,0.15); border-color: rgba(0,212,255,0.3); color: var(--cyan); font-weight: 700; }
 .set-save { width: 100%; padding: 10px; background: rgba(0,212,255,0.12); border: 1px solid rgba(0,212,255,0.25); border-radius: 8px; color: var(--cyan); font-size: 13px; font-weight: 700; cursor: pointer; margin-top: 14px; }
 .set-status { font-size: 11px; color: var(--green); text-align: center; margin-top: 6px; min-height: 16px; }
-/* WHOOP section */
 .whoop-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .whoop-status { display: flex; align-items: center; gap: 6px; }
 .whoop-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-tertiary); }
 .whoop-dot.on { background: var(--green); box-shadow: 0 0 5px var(--green); }
 .whoop-stats { display: flex; gap: 14px; margin-bottom: 10px; }
-.whoop-stat { text-align: center; }
 .whoop-stat .v { font-size: 18px; font-weight: 700; color: var(--text-primary); }
 .whoop-stat .l { font-size: 9px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.08em; }
 .whoop-btn { background: rgba(0,212,255,0.08); border: 1px solid var(--card-border); border-radius: 7px; padding: 7px 14px; color: var(--cyan); font-size: 12px; cursor: pointer; }
 </style>
 </head>
 <body>
-<div class="shell">
+<div class="page">
 
-  <!-- ── HEADER ─────────────────────────────────────────────── -->
+  <!-- HEADER -->
   <header class="j-head">
-    <div class="head-logo">
-      <div class="logo-ring-wrap">
-        <svg viewBox="0 0 26 26" fill="none">
-          <circle cx="13" cy="13" r="11.5" stroke="rgba(0,212,255,0.2)" stroke-width="1"/>
-          <path d="M13 1.5 A11.5 11.5 0 0 1 24.5 13" stroke="#00D4FF" stroke-width="1.5" stroke-linecap="round"/>
-          <circle cx="13" cy="13" r="3" fill="rgba(0,212,255,0.4)"/>
-          <circle cx="13" cy="13" r="1.5" fill="#00D4FF"/>
-        </svg>
-      </div>
-      <span class="logo-text">JARVIS</span>
+    <div class="j-logo">
+      <svg class="logo-svg" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="10.5" stroke="rgba(0,212,255,0.2)" stroke-width="1"/>
+        <path d="M12 1.5 A10.5 10.5 0 0 1 22.5 12" stroke="#00D4FF" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="12" cy="12" r="3" fill="rgba(0,212,255,0.35)"/>
+        <circle cx="12" cy="12" r="1.4" fill="#00D4FF"/>
+      </svg>
+      <span class="logo-txt">JARVIS</span>
     </div>
-    <div class="head-center">
-      <div class="head-greeting" id="headGreeting"><strong>Good morning, Anish.</strong></div>
-    </div>
+    <div class="head-divider"></div>
+    <div class="head-greeting" id="headGreeting"><strong>Good morning, Anish.</strong></div>
     <div class="head-right">
-      <div class="sys-online"><div class="sys-dot"></div> SYSTEM ONLINE</div>
+      <div class="sys-pill"><div class="sys-dot"></div> SYSTEM ONLINE</div>
       <div class="head-time" id="headTime">—</div>
       <div class="sync-badge" id="syncBadge">loading…</div>
       <button class="gear-btn" id="settingsOpen" title="Settings">⚙</button>
     </div>
   </header>
 
-  <!-- ── SIDEBAR ────────────────────────────────────────────── -->
-  <nav class="j-sidebar">
-    <a class="nav-link active" href="index.html"><span class="nav-icon">⌂</span> Home</a>
-    <a class="nav-link" href="sales.html"><span class="nav-icon">📞</span> Sales</a>
-    <a class="nav-link" href="gym.html"><span class="nav-icon">💪</span> Gym</a>
-    <a class="nav-link" href="health.html"><span class="nav-icon">❤</span> Health</a>
-    <a class="nav-link" href="finance.html"><span class="nav-icon">💰</span> Finance</a>
-    <a class="nav-link" href="nova.html"><span class="nav-icon">🧠</span> Nova</a>
-    <div class="nav-sep"></div>
-    <hr class="nav-hr">
-    <a class="nav-link" href="#" id="settingsOpen2"><span class="nav-icon">⚙</span> Settings</a>
-  </nav>
+  <div class="body-wrap">
 
-  <!-- ── CENTER: JARVIS AI ──────────────────────────────────── -->
-  <main class="j-center">
+    <!-- SIDEBAR -->
+    <nav class="j-sidebar">
+      <a class="nav-link active" href="index.html"><span class="nav-ico">⌂</span> Home</a>
+      <a class="nav-link" href="sales.html"><span class="nav-ico">📞</span> Sales</a>
+      <a class="nav-link" href="gym.html"><span class="nav-ico">💪</span> Gym</a>
+      <a class="nav-link" href="health.html"><span class="nav-ico">❤</span> Health</a>
+      <a class="nav-link" href="finance.html"><span class="nav-ico">💰</span> Finance</a>
+      <a class="nav-link" href="nova.html"><span class="nav-ico">🧠</span> Nova</a>
+      <div class="nav-sep"></div>
+      <hr class="nav-hr">
+      <a class="nav-link" href="#" id="settingsOpen2"><span class="nav-ico">⚙</span> Settings</a>
+    </nav>
 
-    <div id="errBanner" class="err-banner"><strong id="errTitle">Error</strong> — <span id="errDetail"></span></div>
+    <!-- MAIN GRID -->
+    <main class="j-main">
 
-    <!-- Circular animation -->
-    <div class="j-arc-wrap" id="arcWrap">
-      <div class="arc arc-1"></div>
-      <div class="arc arc-2"></div>
-      <div class="arc arc-3"></div>
-      <div class="arc arc-4"></div>
-      <div class="arc arc-glow"></div>
-      <div class="arc arc-core"><span class="arc-letter">J</span></div>
-    </div>
+      <!-- ── LEFT COLUMN ────────────────────────────────────────── -->
+      <div style="display:flex;flex-direction:column;gap:14px;min-width:0;">
 
-    <!-- Voice status row -->
-    <div class="j-voice-info">
-      <div class="voice-status-row">
-        <div class="vdot" id="vDot"></div>
-        <span id="vLabel">MUTED</span>
-      </div>
-      <div class="j-wave" id="jWave">
-        <div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div>
-        <div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div>
-      </div>
-    </div>
+        <!-- Error banner -->
+        <div id="errBanner" class="err-banner"><strong id="errTitle">Error</strong> — <span id="errDetail"></span></div>
 
-    <!-- Chat history -->
-    <div class="j-chat" id="jChat">
-      <div class="chat-empty" id="chatEmpty">Ask me anything — voice or text below.</div>
-    </div>
-
-    <!-- Live transcript -->
-    <div class="j-transcript" id="jTranscript"></div>
-
-    <!-- Input row -->
-    <div class="j-input-row">
-      <input class="j-input" id="jTextInput" placeholder="Ask JARVIS anything…" autocomplete="off">
-      <button class="j-send" id="jSendBtn" title="Send">➤</button>
-      <button class="j-mic" id="jMicBtn" title="Toggle voice">🎤</button>
-    </div>
-    <div class="voice-note" id="voiceNote">Voice requires HTTPS / Chrome — use text input as fallback</div>
-
-  </main>
-
-  <!-- ── RIGHT PANEL ────────────────────────────────────────── -->
-  <aside class="j-right">
-
-    <!-- Sprint status -->
-    <div class="jc">
-      <div class="jc-title">Command Status <span class="jc-sub" id="syncTimeRight"></span></div>
-      <div class="sprint-row" id="sprintDialsRow">
-        <div>
-          <div class="sprint-name">Michelle · 60 dials/day</div>
-          <div class="sprint-detail" id="sprintDialsDetail">—</div>
+        <!-- Sprint row -->
+        <div class="sprint-row">
+          <div class="sprint-card" id="sprintDialsRow">
+            <div class="sprint-top">
+              <span class="sprint-name">Michelle · 60 dials/day</span>
+              <span class="sprint-badge" id="sprintDialsLabel">—</span>
+            </div>
+            <div class="sprint-detail" id="sprintDialsDetail">Syncing…</div>
+          </div>
+          <div class="sprint-card" id="sprintMtgRow">
+            <div class="sprint-top">
+              <span class="sprint-name">10 meetings / week</span>
+              <span class="sprint-badge" id="sprintMtgLabel">—</span>
+            </div>
+            <div class="sprint-detail" id="sprintMtgDetail">Syncing…</div>
+          </div>
         </div>
-        <div class="sprint-status" id="sprintDialsStatus">
-          <span class="sprint-badge" id="sprintDialsLabel">—</span>
-        </div>
-      </div>
-      <div class="sprint-row" id="sprintMtgRow">
-        <div>
-          <div class="sprint-name">10 meetings / week</div>
-          <div class="sprint-detail" id="sprintMtgDetail">—</div>
-        </div>
-        <div class="sprint-status" id="sprintMtgStatus">
-          <span class="sprint-badge" id="sprintMtgLabel">—</span>
-        </div>
-      </div>
-    </div>
 
-    <!-- Week metrics -->
-    <div class="jc">
-      <div class="jc-title">This Week</div>
-      <div class="wm-row">
-        <div class="wm-lbl">Meetings</div>
-        <div class="wm-right">
-          <div class="wm-val cyan" id="wkMeetings">—</div>
-          <div class="wm-note">of 10 goal</div>
+        <!-- Monthly card -->
+        <div class="card">
+          <span class="card-label" id="monthLabel">This Month</span>
+          <div class="kpi-row">
+            <div class="kpi">
+              <div class="kpi-val hi" id="kpiAppts">—</div>
+              <div class="kpi-sub">Appointments</div>
+              <div class="kpi-detail"><span id="kpiApptA">—</span> Anish · <span id="kpiApptM">—</span> Michelle</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-val cy" id="kpiMqls">—</div>
+              <div class="kpi-sub">MQLs</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-val" id="kpiSqls">—</div>
+              <div class="kpi-sub">SQLs</div>
+            </div>
+          </div>
+          <div class="funnel-person-row">
+            <div>
+              <div class="funnel-person-label">Anish</div>
+              <div id="mFunnelAnish"></div>
+            </div>
+            <div>
+              <div class="funnel-person-label">Michelle</div>
+              <div id="mFunnelMichelle"></div>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="prog-wrap">
-        <div class="prog-track"><div class="prog-fill" id="mtgProgBar" style="width:0%"></div></div>
-      </div>
-      <div class="wm-row" style="margin-top:8px">
-        <div class="wm-lbl">Avg dials/day</div>
-        <div class="wm-right">
-          <div class="wm-val" id="wkAvg">—</div>
-          <div class="wm-note">A + M combined</div>
-        </div>
-      </div>
-      <div class="wm-row">
-        <div class="wm-lbl">Connects</div>
-        <div class="wm-right">
-          <div class="wm-val" id="wkConn">—</div>
-        </div>
-      </div>
-      <div class="wm-row">
-        <div class="wm-lbl">Appts this month</div>
-        <div class="wm-right">
-          <div class="wm-val green" id="kpiAppts">—</div>
-          <div class="wm-note"><span id="kpiApptA">—</span> A · <span id="kpiApptM">—</span> M</div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Today's Focus -->
-    <div class="jc" style="border-left: 2px solid var(--cyan);">
-      <div class="jc-title">Today's Focus <span class="jc-sub" id="todayCount"></span></div>
-      <ul class="task-list" id="todayList"></ul>
-      <div class="add-row">
-        <input class="t-input" id="todayInput" placeholder="Add commitment…">
-        <button class="add-btn" id="todayAdd">+</button>
-      </div>
-    </div>
-
-    <!-- Tomorrow -->
-    <div class="jc">
-      <div class="jc-title">Tomorrow <span class="jc-sub" id="tomorrowCount"></span></div>
-      <ul class="task-list" id="tomorrowList"></ul>
-      <div class="add-row">
-        <input class="t-input" id="tomorrowInput" placeholder="Plan ahead…">
-        <button class="add-btn" id="tomorrowAdd">+</button>
-      </div>
-    </div>
-
-    <!-- Deadlines -->
-    <div class="jc dl-jcard">
-      <div class="jc-title">Deadlines</div>
-      <div class="dl-row">
-        <div>
-          <div class="dl-name">Michelle · 60 dials/day</div>
-          <div class="dl-date">Jun 30, 2026</div>
+        <!-- Weekly card -->
+        <div class="card">
+          <span class="card-label" id="weekLabel">This Week</span>
+          <div class="wk-stat-row">
+            <div class="wk-stat">
+              <div class="wk-stat-val" style="color:var(--cyan)" id="wkMeetings">—</div>
+              <div class="wk-stat-lbl">Meetings <span style="color:var(--text-tertiary)">/10</span></div>
+            </div>
+            <div class="wk-stat">
+              <div class="wk-stat-val" id="wkAvg">—</div>
+              <div class="wk-stat-lbl">Avg dials/day</div>
+            </div>
+            <div class="wk-stat">
+              <div class="wk-stat-val" id="wkConn">—</div>
+              <div class="wk-stat-lbl">Connects</div>
+            </div>
+          </div>
+          <div class="bar-legend">
+            <span><span class="legend-dot" style="background:var(--cyan)"></span> <span class="legend-txt">Anish</span></span>
+            <span><span class="legend-dot" style="background:rgba(0,212,255,0.35)"></span> <span class="legend-txt">Michelle</span></span>
+          </div>
+          <div class="bar-area" id="barChart"></div>
+          <div class="funnel-person-row" style="margin-top:10px">
+            <div>
+              <div class="funnel-person-label">Anish</div>
+              <div id="wFunnelAnish"></div>
+            </div>
+            <div>
+              <div class="funnel-person-label">Michelle</div>
+              <div id="wFunnelMichelle"></div>
+            </div>
+          </div>
         </div>
-        <div class="dl-badge">
-          <div class="dl-num" id="dlDialsFull">—</div>
-          <div class="dl-unit">days left</div>
-        </div>
-      </div>
-      <div class="dl-row">
-        <div>
-          <div class="dl-name">10 meetings/week</div>
-          <div class="dl-date">Jul 2, 2026</div>
-        </div>
-        <div class="dl-badge">
-          <div class="dl-num" id="dlMtgFull">—</div>
-          <div class="dl-unit">days left</div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Sequence Health -->
-    <div class="jc">
-      <div class="jc-title">Sequence Health <span class="jc-sub" id="seqSyncTime"></span></div>
-      <table class="seq-tbl">
-        <thead>
-          <tr><th></th><th>Anish</th><th>Michelle</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Enrolled</td>
-            <td class="av" id="seqAE">—</td>
-            <td class="av" id="seqME">—</td>
-          </tr>
-          <tr>
-            <td>P1 available <span style="font-size:9px;color:var(--text-tertiary)">(manual)</span></td>
-            <td><input class="s-inp" id="seqAP" placeholder="—"></td>
-            <td><input class="s-inp" id="seqMP" placeholder="—"></td>
-          </tr>
-          <tr>
-            <td>Added this week</td>
-            <td class="av" id="seqAW">—</td>
-            <td class="av" id="seqMW">—</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+        <!-- Rolling trend -->
+        <div class="card">
+          <span class="card-label">4-Week Rolling Trend</span>
+          <div class="trend-section">
+            <div class="trend-section-lbl">Meetings</div>
+            <div id="trendMtg"></div>
+          </div>
+          <div class="trend-section">
+            <div class="trend-section-lbl">Total Dials</div>
+            <div id="trendDials"></div>
+          </div>
+        </div>
 
-  </aside>
-</div><!-- /shell -->
+      </div><!-- /left col -->
 
-<!-- Hidden elements required by JS (not displayed) -->
-<div style="display:none">
-  <div id="monthLabel"></div><div id="weekLabel"></div>
-  <div id="kpiMqls"></div><div id="kpiSqls"></div>
-  <div id="mFunnelAnish"></div><div id="mFunnelMichelle"></div>
-  <div id="wFunnelAnish"></div><div id="wFunnelMichelle"></div>
-  <div id="barChart"></div>
-  <div id="trendMtg"></div><div id="trendDials"></div>
-  <div id="dlDials"></div><div id="dlMtg"></div>
-</div>
+      <!-- ── RIGHT COLUMN ───────────────────────────────────────── -->
+      <div style="display:flex;flex-direction:column;gap:12px;min-width:0;">
+
+        <!-- JARVIS widget -->
+        <div class="jarvis-widget">
+          <div class="jw-top">
+            <!-- Circular animation -->
+            <div class="jw-arc-wrap" id="jwArcWrap">
+              <div class="jw-arc jw-arc-1"></div>
+              <div class="jw-arc jw-arc-2"></div>
+              <div class="jw-arc jw-arc-3"></div>
+              <div class="jw-arc jw-arc-core"></div>
+              <div class="jw-arc jw-arc-center"></div>
+            </div>
+            <!-- Status info -->
+            <div class="jw-info">
+              <div class="jw-title">JARVIS</div>
+              <div class="jw-status">
+                <div class="vdot" id="vDot"></div>
+                <span id="vLabel">MUTED</span>
+              </div>
+              <div class="jw-wave" id="jwWave">
+                <div class="wb"></div><div class="wb"></div><div class="wb"></div>
+                <div class="wb"></div><div class="wb"></div><div class="wb"></div>
+              </div>
+            </div>
+          </div>
+          <!-- Chat -->
+          <div class="jw-chat" id="jwChat">
+            <div class="chat-empty" id="jwChatEmpty">Ask anything — voice or text.</div>
+          </div>
+          <div class="jw-transcript" id="jwTranscript"></div>
+          <!-- Input -->
+          <div class="jw-input-row">
+            <input class="jw-input" id="jwInput" placeholder="Ask JARVIS…" autocomplete="off">
+            <button class="jw-send" id="jwSend" title="Send">➤</button>
+            <button class="jw-mic" id="jwMic" title="Toggle voice">🎤</button>
+          </div>
+          <div class="jw-note" id="jwNote">Voice requires Chrome + HTTPS</div>
+        </div>
+
+        <!-- Today's Focus -->
+        <div class="card focus-card">
+          <span class="card-label">Today's Focus <span class="card-sub" id="todayCount"></span></span>
+          <ul class="task-list" id="todayList"></ul>
+          <div class="add-row">
+            <input class="t-input" id="todayInput" placeholder="Add commitment…">
+            <button class="add-btn" id="todayAdd">+</button>
+          </div>
+        </div>
+
+        <!-- Tomorrow -->
+        <div class="card">
+          <span class="card-label">Tomorrow <span class="card-sub" id="tomorrowCount"></span></span>
+          <ul class="task-list" id="tomorrowList"></ul>
+          <div class="add-row">
+            <input class="t-input" id="tomorrowInput" placeholder="Plan ahead…">
+            <button class="add-btn" id="tomorrowAdd">+</button>
+          </div>
+        </div>
+
+        <!-- Deadlines -->
+        <div class="card deadline-card">
+          <span class="card-label">Deadlines</span>
+          <div class="dl-row">
+            <div><div class="dl-lbl">Michelle · 60 dials/day</div><div class="dl-date">Jun 30, 2026</div></div>
+            <div class="dl-badge">
+              <div class="dl-num" id="dlDialsFull">—</div>
+              <div class="dl-unit">days left</div>
+            </div>
+          </div>
+          <div class="dl-row">
+            <div><div class="dl-lbl">10 meetings/week</div><div class="dl-date">Jul 2, 2026</div></div>
+            <div class="dl-badge">
+              <div class="dl-num" id="dlMtgFull">—</div>
+              <div class="dl-unit">days left</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sequence health -->
+        <div class="card">
+          <span class="card-label">Sequence Health <span class="card-sub" id="seqSyncTime"></span></span>
+          <table class="seq-tbl">
+            <thead><tr><th></th><th>Anish</th><th>Michelle</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>Enrolled</td>
+                <td class="av" id="seqAE">—</td><td class="av" id="seqME">—</td>
+              </tr>
+              <tr>
+                <td>P1 <span style="font-size:9px;color:var(--text-tertiary)">(manual)</span></td>
+                <td><input class="s-inp" id="seqAP" placeholder="—"></td>
+                <td><input class="s-inp" id="seqMP" placeholder="—"></td>
+              </tr>
+              <tr>
+                <td>Added this week</td>
+                <td class="av" id="seqAW">—</td><td class="av" id="seqMW">—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div><!-- /right col -->
+
+    </main><!-- /j-main -->
+  </div><!-- /body-wrap -->
+
+  <!-- Hidden stubs for JS compat -->
+  <div style="display:none">
+    <div id="dlDials"></div><div id="dlMtg"></div>
+    <div id="sprintDialsStatus"></div><div id="sprintMtgStatus"></div>
+  </div>
+
+</div><!-- /page -->
 
 <!-- Settings Modal -->
 <div class="settings-bg" id="settingsBg">
@@ -568,7 +607,6 @@ body::before {
       <span class="set-title">Settings</span>
       <button class="set-close" id="settingsClose">×</button>
     </div>
-
     <div class="set-section">Profile</div>
     <div class="set-row">
       <span class="set-lbl">Height</span>
@@ -591,10 +629,7 @@ body::before {
         </div>
       </div>
     </div>
-    <div class="set-row">
-      <span class="set-lbl">Age</span>
-      <input class="set-field" id="age" placeholder="25" type="number">
-    </div>
+    <div class="set-row"><span class="set-lbl">Age</span><input class="set-field" id="age" placeholder="25" type="number"></div>
     <div class="set-row">
       <span class="set-lbl">Sex</span>
       <div class="seg-wrap" id="sexSeg" style="flex:1">
@@ -602,11 +637,7 @@ body::before {
         <button class="seg-btn" data-s="f">Female</button>
       </div>
     </div>
-    <div class="set-row">
-      <span class="set-lbl">Activity hrs/wk</span>
-      <input class="set-field" id="activity" placeholder="5" type="number">
-    </div>
-
+    <div class="set-row"><span class="set-lbl">Activity hrs/wk</span><input class="set-field" id="activity" placeholder="5" type="number"></div>
     <div class="set-section">WHOOP</div>
     <div class="whoop-row">
       <div class="whoop-status">
@@ -621,157 +652,168 @@ body::before {
       <div class="whoop-stat"><div class="v" id="whRhr">—</div><div class="l">Rest HR</div></div>
     </div>
     <button class="whoop-btn" id="whAction" type="button">Sync now</button>
-
     <button class="set-save" id="settingsSave">Save Settings</button>
     <div class="set-status" id="settingsStatus"></div>
   </div>
 </div>
 
 <script>
-(function () {
+(function() {
 'use strict';
 
-// ── Helpers ──────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
-const setText = (id, v) => { const el=$(id); if(el) el.textContent = String(v ?? '—'); };
-const loadJSON = (k,f) => { try { return JSON.parse(localStorage.getItem(k)) || f; } catch { return f; } };
-const saveJSON = (k,v) => localStorage.setItem(k, JSON.stringify(v));
+const setText = (id,v) => { const el=$(id); if(el) el.textContent=String(v??'—'); };
+const loadJSON = (k,f) => { try{return JSON.parse(localStorage.getItem(k))||f;}catch{return f;} };
+const saveJSON = (k,v) => localStorage.setItem(k,JSON.stringify(v));
 
-// ── Live clock + greeting ────────────────────────────────────
+// ── Clock + greeting ──────────────────────────────────────────
 function updateClock() {
-  const now = new Date();
-  const h = now.getHours();
-  const greet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
-  const el = $('headGreeting');
-  if (el) el.innerHTML = `<strong>${greet}, Anish.</strong>`;
-  setText('headTime', now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }));
+  const now=new Date(), h=now.getHours();
+  const greet=h<12?'Good morning':h<17?'Good afternoon':'Good evening';
+  const el=$('headGreeting'); if(el) el.innerHTML=`<strong>${greet}, Anish.</strong>`;
+  setText('headTime', now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}));
 }
-updateClock();
-setInterval(updateClock, 10000);
+updateClock(); setInterval(updateClock, 10000);
 
-// ── Date helpers ─────────────────────────────────────────────
-function daysUntil(iso) {
-  const diff = Math.ceil((new Date(iso+'T00:00:00') - new Date()) / 86400000);
-  return diff > 0 ? diff : 0;
-}
-function isoWeekStart() {
-  const n = new Date(), dow = n.getDay();
-  const mon = new Date(n); mon.setDate(n.getDate() - (dow===0?6:dow-1));
-  return mon.toISOString().slice(0,10);
-}
-function monthName()  { return new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'}); }
-function weekRange()  {
-  const n=new Date(),dow=n.getDay(),mon=new Date(n);
-  mon.setDate(n.getDate()-(dow===0?6:dow-1));
-  const fri=new Date(mon); fri.setDate(mon.getDate()+4);
-  const f=d=>d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
-  return f(mon)+' – '+f(fri);
-}
+// ── Date helpers ──────────────────────────────────────────────
+function daysUntil(iso){ const d=Math.ceil((new Date(iso+'T00:00:00')-new Date())/86400000); return d>0?d:0; }
+function isoWeekStart(){ const n=new Date(),dow=n.getDay(),mon=new Date(n); mon.setDate(n.getDate()-(dow===0?6:dow-1)); return mon.toISOString().slice(0,10); }
+function monthName(){ return new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'}); }
+function weekRange(){ const n=new Date(),dow=n.getDay(),mon=new Date(n); mon.setDate(n.getDate()-(dow===0?6:dow-1)); const fri=new Date(mon); fri.setDate(mon.getDate()+4); const f=d=>d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); return f(mon)+' – '+f(fri); }
 
 // ── Deadlines ─────────────────────────────────────────────────
-const DL_DIALS = '2026-06-30';
-const DL_MTG   = '2026-07-02';
-
-function dlClass(days) { return days<=7?'urgent':days<=14?'warn':'safe'; }
+function dlClass(d){ return d<=7?'urgent':d<=14?'warn':'safe'; }
 function renderDeadlines() {
-  const dd=daysUntil(DL_DIALS), dm=daysUntil(DL_MTG);
-  setText('dlDials', dd+'d'); setText('dlMtg', dm+'d');
+  const dd=daysUntil('2026-06-30'), dm=daysUntil('2026-07-02');
+  setText('dlDials',dd+'d'); setText('dlMtg',dm+'d');
   const ddf=$('dlDialsFull'); if(ddf){ddf.textContent=dd; ddf.className='dl-num '+dlClass(dd);}
   const dmf=$('dlMtgFull');   if(dmf){dmf.textContent=dm; dmf.className='dl-num '+dlClass(dm);}
 }
 renderDeadlines();
 
-// ── Sprint status ─────────────────────────────────────────────
-const MICHELLE_CALL_FLOOR = '2026-06-10';
-
-function setSprintClass(rowId, statusId, labelId, cls, label, detail) {
-  const row = $(rowId); if(row) row.className = 'sprint-row '+cls;
-  const badge = $(labelId); if(badge) badge.textContent = label;
-  setText(statusId, ''); // status div is just a wrapper for badge
-  setText(detailId_for(statusId), detail);
-}
-function detailId_for(sid) {
-  return sid === 'sprintDialsStatus' ? 'sprintDialsDetail' : 'sprintMtgDetail';
-}
-
+// ── Sprint + metrics ──────────────────────────────────────────
+const MICHELLE_CALL_FLOOR='2026-06-10';
 function updateSprints(data) {
-  if (!data) return;
-  // Michelle dials sprint
-  const mDials = data.monthly.michelle.dials;
-  const floorDate = new Date(MICHELLE_CALL_FLOOR+'T00:00:00');
-  const today = new Date(); today.setHours(0,0,0,0);
-  const daysActive = Math.max(1, Math.round((today-floorDate)/86400000));
-  const avg = mDials / daysActive;
-  const dialsCls = avg>=60?'on-track':avg>=45?'at-risk':'off-track';
-  const dialsLabel = avg>=60?'ON TRACK':avg>=45?'AT RISK':'OFF TRACK';
-  const dRow=$('sprintDialsRow'); if(dRow) dRow.className='sprint-row '+dialsCls;
-  setText('sprintDialsLabel', dialsLabel);
-  setText('sprintDialsDetail', `Avg ${avg.toFixed(0)}/day · ${mDials} total`);
-
+  if(!data) return;
+  // Dials sprint
+  const mDials=data.monthly.michelle.dials;
+  const daysActive=Math.max(1,Math.round((new Date()-new Date(MICHELLE_CALL_FLOOR+'T00:00:00'))/86400000));
+  const avg=mDials/daysActive;
+  const dc=avg>=60?'on-track':avg>=45?'at-risk':'off-track';
+  const dRow=$('sprintDialsRow'); if(dRow) dRow.className='sprint-card '+dc;
+  setText('sprintDialsLabel', avg>=60?'ON TRACK':avg>=45?'AT RISK':'OFF TRACK');
+  setText('sprintDialsDetail',`Avg ${avg.toFixed(0)}/day · ${mDials} total · ${daysActive} days`);
   // Meetings sprint
-  const wm = data.weekly.weekMeetings;
-  const dow = new Date().getDay();
-  const daysElapsed = (dow===0||dow>=5)?5:Math.max(1,dow-1);
-  const proj = Math.round((wm/daysElapsed)*5);
-  const mtgCls = (wm>=8||proj>=10)?'on-track':(wm>=5||proj>=7)?'at-risk':'off-track';
-  const mtgLabel = (wm>=8||proj>=10)?'ON TRACK':(wm>=5||proj>=7)?'AT RISK':'OFF TRACK';
-  const mRow=$('sprintMtgRow'); if(mRow) mRow.className='sprint-row '+mtgCls;
-  setText('sprintMtgLabel', mtgLabel);
-  setText('sprintMtgDetail', `${wm}/10 this week · proj ${proj}/wk`);
-
-  // Week metrics
-  setText('wkMeetings', wm);
-  const pct = Math.min(100, Math.round(wm/10*100));
-  const bar=$('mtgProgBar'); if(bar){bar.style.width=pct+'%'; if(wm>=10)bar.classList.add('g');}
-  const totalAvg = +((data.weekly.anish.avgDials+data.weekly.michelle.avgDials)).toFixed(1);
-  setText('wkAvg', totalAvg);
-  setText('wkConn', data.weekly.anish.connects+data.weekly.michelle.connects);
+  const wm=data.weekly.weekMeetings, dow=new Date().getDay();
+  const daysElapsed=(dow===0||dow>=5)?5:Math.max(1,dow-1);
+  const proj=Math.round((wm/daysElapsed)*5);
+  const mc=(wm>=8||proj>=10)?'on-track':(wm>=5||proj>=7)?'at-risk':'off-track';
+  const mRow=$('sprintMtgRow'); if(mRow) mRow.className='sprint-card '+mc;
+  setText('sprintMtgLabel',(wm>=8||proj>=10)?'ON TRACK':(wm>=5||proj>=7)?'AT RISK':'OFF TRACK');
+  setText('sprintMtgDetail',`${wm}/10 this week · proj ${proj}/wk`);
+  // Monthly KPIs
+  setText('monthLabel', monthName());
   setText('kpiAppts', data.monthly.appts);
   setText('kpiApptA', data.monthly.apptAnish);
   setText('kpiApptM', data.monthly.apptMichelle);
-  setText('kpiMqls', data.monthly.mqls);
-  setText('kpiSqls', data.monthly.sqls);
-
-  // header right sync note
-  const t=new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
-  setText('syncTimeRight', t);
+  setText('kpiMqls',  data.monthly.mqls);
+  setText('kpiSqls',  data.monthly.sqls);
+  // Weekly stats
+  setText('weekLabel', weekRange());
+  setText('wkMeetings', wm);
+  const totalAvg=+((data.weekly.anish.avgDials+data.weekly.michelle.avgDials)).toFixed(1);
+  setText('wkAvg', totalAvg);
+  setText('wkConn', data.weekly.anish.connects+data.weekly.michelle.connects);
 }
 
-// ── Stubs for hidden elements (sales page renders these fully) ─
-function renderMonthly(d) { setText('monthLabel',monthName()); }
-function renderWeekly(d)  { setText('weekLabel',weekRange()); }
-function renderTrend(h)   {} // no-op on home page; sales.html has the chart
-function saveTrend(data)  {
-  const TREND_KEY='jarvis_trend_v1', ws=isoWeekStart();
-  const history=loadJSON(TREND_KEY,[]);
+// ── Funnel renderer ───────────────────────────────────────────
+function renderFunnel(containerId, f) {
+  const stages=[
+    {label:'Connected',  val:f.connects,   color:'var(--green)'},
+    {label:'Pitched',    val:f.pitched,    color:'var(--amber)'},
+    {label:'Past Pitch', val:f.pastPitch,  color:'var(--orange)'},
+    {label:'Mtg Set',    val:f.meetingSet, color:'var(--red)'},
+  ];
+  const base=Math.max(1, f.connects);
+  $(containerId).innerHTML=stages.map(s=>`
+    <div class="funnel-row">
+      <span class="funnel-label">${s.label}</span>
+      <div class="funnel-track"><div class="funnel-fill" style="width:${Math.min(100,Math.round(s.val/base*100))}%;background:${s.color}"></div></div>
+      <span class="funnel-num">${s.val}</span>
+    </div>`).join('');
+}
+
+// ── Bar chart ─────────────────────────────────────────────────
+function renderBarChart(byDay) {
+  const DAYS=['Mon','Tue','Wed','Thu','Fri'];
+  const maxVal=Math.max(1,...DAYS.flatMap(d=>[byDay.Anish[d],byDay.Michelle[d]]));
+  const H=72;
+  $('barChart').innerHTML=DAYS.map(day=>{
+    const a=byDay.Anish[day],m=byDay.Michelle[day];
+    const aH=Math.max(2,Math.round(a/maxVal*H)), mH=Math.max(2,Math.round(m/maxVal*H));
+    return `<div class="bar-day">
+      <div class="bar-group">
+        <div class="bar-col anish"    style="height:${aH}px" title="Anish ${a}"></div>
+        <div class="bar-col michelle" style="height:${mH}px" title="Michelle ${m}"></div>
+      </div>
+      <div class="bar-nums">${a}/${m}</div>
+      <div class="bar-lbl">${day}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Rolling trend ─────────────────────────────────────────────
+const TREND_KEY='jarvis_trend_v1';
+function saveTrend(data) {
+  const ws=isoWeekStart(), history=loadJSON(TREND_KEY,[]);
   const idx=history.findIndex(e=>e.week===ws);
   const entry={week:ws,label:new Date(ws+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}),meetings:data.weekly.weekMeetings,dials:data.weekly.anish.dials+data.weekly.michelle.dials};
   if(idx>=0)history[idx]=entry; else history.push(entry);
-  saveJSON(TREND_KEY,history.sort((a,b)=>a.week.localeCompare(b.week)).slice(-8));
+  const trimmed=history.sort((a,b)=>a.week.localeCompare(b.week)).slice(-8);
+  saveJSON(TREND_KEY,trimmed); renderTrend(trimmed);
 }
+function renderTrend(history) {
+  const placeholder='<div style="font-size:11px;color:var(--text-tertiary);padding:4px 0">Builds automatically — 1 bar per week</div>';
+  if(!history||!history.length){ $('trendMtg').innerHTML=placeholder; $('trendDials').innerHTML=''; return; }
+  const last4=history.slice(-4), ws=isoWeekStart(), MAX_H=44;
+  function chartHTML(key,goal) {
+    const maxVal=Math.max(goal||1,...last4.map(e=>e[key]));
+    const bars=last4.map(e=>{
+      const barH=Math.max(4,Math.round(e[key]/maxVal*MAX_H)), cur=e.week===ws;
+      return `<div class="trend-bar-wrap">
+        <div class="trend-val">${e[key]}</div>
+        <div class="trend-bar ${cur?'current':''}" style="height:${barH}px"></div>
+        <div class="trend-wk">${e.label}</div>
+      </div>`;
+    }).join('');
+    const note=last4.length<4?`<div style="font-size:10px;color:var(--text-tertiary);margin-top:6px">${last4.length}/4 weeks</div>`:'';
+    return `<div class="trend-chart">${bars}</div>${note}`;
+  }
+  $('trendMtg').innerHTML   = chartHTML('meetings',10);
+  $('trendDials').innerHTML = chartHTML('dials',200);
+}
+renderTrend(loadJSON(TREND_KEY,[]));
+
+// ── Monthly / Weekly render ───────────────────────────────────
+function renderMonthly(d) { renderFunnel('mFunnelAnish',d.anish); renderFunnel('mFunnelMichelle',d.michelle); }
+function renderWeekly(d)  { renderBarChart(d.byDay); renderFunnel('wFunnelAnish',d.anish); renderFunnel('wFunnelMichelle',d.michelle); }
 
 // ── HubSpot sync ──────────────────────────────────────────────
 let syncing=false, countdown=300;
 const POLL_SEC=300;
-
 async function loadAll() {
-  if(syncing) return;
-  syncing=true; setText('syncBadge','syncing…');
+  if(syncing) return; syncing=true; setText('syncBadge','syncing…');
   $('errBanner').classList.remove('show');
   try {
-    const data=await fetch('/api/hubspot?type=all').then(async r=>{
-      const j=await r.json(); if(!r.ok) throw new Error(j.error||`HTTP ${r.status}`); return j;
-    });
+    const data=await fetch('/api/hubspot?type=all').then(async r=>{const j=await r.json();if(!r.ok)throw new Error(j.error||`HTTP ${r.status}`);return j;});
     renderMonthly(data.monthly); renderWeekly(data.weekly);
     updateSprints(data); saveTrend(data);
-    const t=new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
-    setText('syncBadge','Synced '+t); countdown=POLL_SEC;
+    setText('syncBadge','Synced '+new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}));
+    countdown=POLL_SEC;
   } catch(e) {
     $('errBanner').classList.add('show');
-    setText('errTitle','HubSpot sync failed');
-    setText('errDetail',e.message||String(e));
-    const t=new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
-    setText('syncBadge','Failed '+t);
+    setText('errTitle','HubSpot sync failed'); setText('errDetail',e.message||String(e));
+    setText('syncBadge','Failed '+new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}));
   }
   syncing=false;
 }
@@ -780,7 +822,6 @@ loadAll();
 
 // ── Kanban ────────────────────────────────────────────────────
 const TODAY_KEY='jarvis_today_v1', TOMORROW_KEY='jarvis_tomorrow_v1';
-
 function renderTasks(listId,key) {
   const tasks=loadJSON(key,[]), ul=$(listId); ul.innerHTML='';
   tasks.forEach((t,i)=>{
@@ -794,21 +835,12 @@ function renderTasks(listId,key) {
   setText(key===TODAY_KEY?'todayCount':'tomorrowCount', tasks.length?`${rem} left`:'');
 }
 function addTask(inputId,key,listId) {
-  const inp=$(inputId), text=inp.value.trim(); if(!text) return;
-  const tasks=loadJSON(key,[]); tasks.push({text,done:false});
-  saveJSON(key,tasks); inp.value=''; renderTasks(listId,key);
+  const inp=$(inputId),text=inp.value.trim(); if(!text) return;
+  const tasks=loadJSON(key,[]); tasks.push({text,done:false}); saveJSON(key,tasks); inp.value=''; renderTasks(listId,key);
 }
 document.addEventListener('click',e=>{
-  if(e.target.classList.contains('task-check')) {
-    const i=+e.target.dataset.i,key=e.target.dataset.key;
-    const tasks=loadJSON(key,[]); tasks[i].done=!tasks[i].done; saveJSON(key,tasks);
-    renderTasks(key===TODAY_KEY?'todayList':'tomorrowList',key);
-  }
-  if(e.target.classList.contains('task-del')) {
-    const i=+e.target.dataset.i,key=e.target.dataset.key;
-    const tasks=loadJSON(key,[]); tasks.splice(i,1); saveJSON(key,tasks);
-    renderTasks(key===TODAY_KEY?'todayList':'tomorrowList',key);
-  }
+  if(e.target.classList.contains('task-check')){const i=+e.target.dataset.i,key=e.target.dataset.key;const tasks=loadJSON(key,[]);tasks[i].done=!tasks[i].done;saveJSON(key,tasks);renderTasks(key===TODAY_KEY?'todayList':'tomorrowList',key);}
+  if(e.target.classList.contains('task-del')){const i=+e.target.dataset.i,key=e.target.dataset.key;const tasks=loadJSON(key,[]);tasks.splice(i,1);saveJSON(key,tasks);renderTasks(key===TODAY_KEY?'todayList':'tomorrowList',key);}
 });
 $('todayAdd').addEventListener('click',()=>addTask('todayInput',TODAY_KEY,'todayList'));
 $('tomorrowAdd').addEventListener('click',()=>addTask('tomorrowInput',TOMORROW_KEY,'tomorrowList'));
@@ -818,172 +850,190 @@ renderTasks('todayList',TODAY_KEY); renderTasks('tomorrowList',TOMORROW_KEY);
 
 // ── Sequence health ───────────────────────────────────────────
 const P1_FIELDS=['seqAP','seqMP'];
-const SEQ_KEY='jarvis_seq_v1';
-function loadSeqManual(){const d=loadJSON(SEQ_KEY,{});P1_FIELDS.forEach(id=>{if($(id)&&d[id]!=null)$(id).value=d[id];});}
-function saveSeqManual(){const d=loadJSON(SEQ_KEY,{});P1_FIELDS.forEach(id=>{if($(id))d[id]=$(id).value;});saveJSON(SEQ_KEY,d);}
+function loadSeqManual(){const d=loadJSON('jarvis_seq_v1',{});P1_FIELDS.forEach(id=>{if($(id)&&d[id]!=null)$(id).value=d[id];});}
+function saveSeqManual(){const d=loadJSON('jarvis_seq_v1',{});P1_FIELDS.forEach(id=>{if($(id))d[id]=$(id).value;});saveJSON('jarvis_seq_v1',d);}
 P1_FIELDS.forEach(id=>{const el=$(id);if(el)el.addEventListener('input',saveSeqManual);});
 loadSeqManual();
-
 let seqSyncing=false, seqCountdown=12;
-async function loadSeqHealth() {
-  if(seqSyncing) return; seqSyncing=true;
-  try {
+async function loadSeqHealth(){
+  if(seqSyncing)return; seqSyncing=true;
+  try{
     const d=await fetch('/api/hubspot?type=contacts').then(async r=>{const j=await r.json();if(!r.ok)throw new Error(j.error);return j;});
     setText('seqAE',d.anish.enrolled??'—'); setText('seqME',d.michelle.enrolled??'—');
     setText('seqAW',d.anish.added??'—');    setText('seqMW',d.michelle.added??'—');
     setText('seqSyncTime',new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}));
     seqCountdown=900;
-  } catch(_){ seqCountdown=300; }
+  }catch(_){seqCountdown=300;}
   seqSyncing=false;
 }
 setInterval(()=>{seqCountdown--;if(seqCountdown<=0){seqCountdown=900;loadSeqHealth();}},1000);
 
-// ── JARVIS Voice + Chat interface ─────────────────────────────
-const chatHistory=[]; // [{role:'user',content:'...'},{role:'assistant',content:'...'}]
-let isListening=false, jProcessing=false;
-let silenceTimer=null, finalTranscript='';
-
-// Check voice support
+// ── JARVIS Voice + Chat ───────────────────────────────────────
+// Voice setup
 const SpeechRec=window.SpeechRecognition||window.webkitSpeechRecognition;
 const hasSpeech=!!SpeechRec;
-let recognition=null;
+let recognition=null, isListening=false, isSpeaking=false, jBusy=false;
+let silenceTimer=null, finalT='';
+const chatHistory=[];
 
-if(hasSpeech) {
-  $('voiceNote').textContent='Click 🎤 to toggle always-listening mode';
+// Load best TTS voice once browser has them
+let bestVoice=null;
+function pickBestVoice(){
+  const vv=speechSynthesis.getVoices();
+  // Priority order: Google US English (Chrome) → Samantha/Karen/Daniel (macOS) → Mark (Windows) → any en-US
+  bestVoice=
+    vv.find(v=>/google us english/i.test(v.name))||
+    vv.find(v=>/samantha/i.test(v.name))||
+    vv.find(v=>/karen/i.test(v.name))||
+    vv.find(v=>/daniel/i.test(v.name))||
+    vv.find(v=>/microsoft mark/i.test(v.name))||
+    vv.find(v=>/en-us/i.test(v.lang))||
+    vv[0]||null;
+}
+if(window.speechSynthesis){
+  speechSynthesis.onvoiceschanged=pickBestVoice;
+  pickBestVoice();
+}
+
+if(hasSpeech){
+  $('jwNote').textContent='🎤 to toggle always-listening mode (Chrome + HTTPS)';
   recognition=new SpeechRec();
   recognition.continuous=true;
   recognition.interimResults=true;
   recognition.lang='en-US';
 
   recognition.onresult=e=>{
+    // KEY FIX: Ignore any input while JARVIS is speaking — prevents self-conversation
+    if(isSpeaking) return;
     let interim='';
     for(let i=e.resultIndex;i<e.results.length;i++){
-      if(e.results[i].isFinal) finalTranscript+=e.results[i][0].transcript+' ';
+      if(e.results[i].isFinal) finalT+=e.results[i][0].transcript+' ';
       else interim+=e.results[i][0].transcript;
     }
-    setText('jTranscript', (finalTranscript+interim).trim() || '');
+    setText('jwTranscript',(finalT+interim).trim()||'');
     clearTimeout(silenceTimer);
-    if(finalTranscript.trim()){
+    if(finalT.trim()){
       silenceTimer=setTimeout(()=>{
-        const msg=finalTranscript.trim(); finalTranscript='';
-        setText('jTranscript','');
+        const msg=finalT.trim(); finalT=''; setText('jwTranscript','');
         if(msg) sendToJarvis(msg);
       },1500);
     }
   };
 
-  recognition.onerror=e=>{
-    if(e.error==='aborted'||e.error==='no-speech') return;
-    console.warn('speech error',e.error);
-  };
-
-  recognition.onend=()=>{
-    if(isListening){ try{ recognition.start(); }catch(_){} }
-  };
-} else {
-  $('voiceNote').textContent='Voice not supported in this browser. Use text input.';
+  recognition.onerror=e=>{ if(e.error==='aborted'||e.error==='no-speech') return; console.warn('Speech:',e.error); };
+  recognition.onend=()=>{ if(isListening&&!isSpeaking){ try{recognition.start();}catch(_){} } };
+}else{
+  $('jwNote').textContent='Voice not supported — use text input (try Chrome)';
 }
 
-function setListeningState(on) {
+function setListeningUI(on){
   isListening=on;
-  const arcWrap=$('arcWrap'), micBtn=$('jMicBtn'), wave=$('jWave'), vDot=$('vDot'), vLabel=$('vLabel');
-  if(on){
-    arcWrap.classList.add('listening'); micBtn.classList.add('on');
-    wave.classList.add('on'); vDot.className='vdot live'; setText('vLabel','LISTENING');
-    try{ recognition.start(); }catch(_){}
-  } else {
-    arcWrap.classList.remove('listening'); micBtn.classList.remove('on');
-    wave.classList.remove('on'); vDot.className='vdot'; setText('vLabel','MUTED');
-    try{ recognition.stop(); }catch(_){}
-    clearTimeout(silenceTimer); finalTranscript=''; setText('jTranscript','');
+  $('jwArcWrap').classList.toggle('listening',on);
+  $('jwMic').classList.toggle('on',on);
+  $('jwWave').classList.toggle('on',on);
+  $('vDot').className='vdot'+(on?' live':'');
+  setText('vLabel',on?'LISTENING':'MUTED');
+}
+
+$('jwMic').addEventListener('click',()=>{
+  if(!hasSpeech){alert('Voice recognition requires Chrome browser.');return;}
+  if(!isListening){
+    setListeningUI(true);
+    try{recognition.start();}catch(_){}
+  }else{
+    setListeningUI(false);
+    try{recognition.stop();}catch(_){}
+    clearTimeout(silenceTimer); finalT=''; setText('jwTranscript','');
   }
-}
-
-function setProcessingState(on) {
-  const vDot=$('vDot'), vLabel=$('vLabel');
-  if(on){ vDot.className='vdot proc'; setText('vLabel','PROCESSING'); }
-  else if(isListening){ vDot.className='vdot live'; setText('vLabel','LISTENING'); }
-  else{ vDot.className='vdot'; setText('vLabel','MUTED'); }
-}
-
-$('jMicBtn').addEventListener('click',()=>{
-  if(!hasSpeech){ alert('Voice recognition is not supported in this browser. Please use Chrome.'); return; }
-  setListeningState(!isListening);
 });
 
-function appendChat(role,text) {
-  const el=$('chatEmpty'); if(el) el.remove();
+function appendChat(role,text){
+  const empty=$('jwChatEmpty'); if(empty) empty.remove();
   const wrap=document.createElement('div'); wrap.className='chat-msg '+role;
-  const who=role==='user'?'You':'JARVIS';
-  wrap.innerHTML=`<div class="chat-who">${who}</div><div class="chat-bubble">${text}</div>`;
-  $('jChat').appendChild(wrap);
-  $('jChat').scrollTop=$('jChat').scrollHeight;
+  wrap.innerHTML=`<div class="chat-who">${role==='user'?'You':'JARVIS'}</div><div class="chat-bubble">${text}</div>`;
+  $('jwChat').appendChild(wrap);
+  $('jwChat').scrollTop=$('jwChat').scrollHeight;
 }
 
-async function sendToJarvis(msg) {
-  if(jProcessing||!msg.trim()) return;
-  jProcessing=true; setProcessingState(true);
-  appendChat('user', msg);
+async function sendToJarvis(msg){
+  if(jBusy||!msg.trim()) return;
+  jBusy=true;
+  $('vDot').className='vdot proc'; setText('vLabel','PROCESSING');
+  appendChat('user',msg);
   chatHistory.push({role:'user',content:msg});
-  // Stop listening while processing
-  if(isListening) try{ recognition.stop(); }catch(_){}
+  // Stop mic while processing so recognition.onend doesn't auto-restart mid-thought
+  if(isListening) try{recognition.stop();}catch(_){}
 
-  try {
-    const r=await fetch('/api/claude',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({message:msg, history:chatHistory.slice(0,-1)}),
-    });
+  try{
+    const r=await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,history:chatHistory.slice(0,-1)})});
     const d=await r.json();
     if(!r.ok) throw new Error(d.error||`HTTP ${r.status}`);
     const reply=d.reply||'—';
     chatHistory.push({role:'assistant',content:reply});
     appendChat('jarvis',reply);
     speakReply(reply);
-  } catch(e) {
+  }catch(e){
     appendChat('jarvis',`Error: ${e.message}`);
+    jBusy=false;
+    if(isListening){$('vDot').className='vdot live';setText('vLabel','LISTENING');try{recognition.start();}catch(_){}}
+    else{$('vDot').className='vdot';setText('vLabel','MUTED');}
   }
-
-  jProcessing=false; setProcessingState(false);
-  // Resume listening
-  if(isListening) try{ recognition.start(); }catch(_){}
 }
 
-function speakReply(text) {
-  if(!window.speechSynthesis) return;
+function speakReply(text){
+  if(!window.speechSynthesis){ jBusy=false; resumeMic(); return; }
+  // CRITICAL: Flag isSpeaking BEFORE we start so onresult handler ignores mic input
+  isSpeaking=true;
   speechSynthesis.cancel();
+
   const u=new SpeechSynthesisUtterance(text);
-  u.rate=1.05; u.pitch=0.95; u.volume=1;
-  const voices=speechSynthesis.getVoices();
-  const pref=voices.find(v=>/daniel|oliver|google uk|en-gb/i.test(v.name+v.lang))
-           || voices.find(v=>/en-us/i.test(v.lang));
-  if(pref) u.voice=pref;
+  if(bestVoice) u.voice=bestVoice;
+  u.rate=0.96;    // slightly slower = more natural
+  u.pitch=0.97;   // very slightly lower
+  u.volume=1.0;
+
+  u.onend=()=>{
+    isSpeaking=false; jBusy=false;
+    // Wait 600ms AFTER speech ends before re-enabling mic — prevents picking up reverb/room echo
+    setTimeout(resumeMic, 600);
+  };
+  u.onerror=()=>{
+    isSpeaking=false; jBusy=false;
+    resumeMic();
+  };
+
   speechSynthesis.speak(u);
 }
 
-// Text input send
-function sendText() {
-  const inp=$('jTextInput'), msg=inp.value.trim(); if(!msg) return;
-  inp.value=''; sendToJarvis(msg);
+function resumeMic(){
+  if(isListening){
+    $('vDot').className='vdot live'; setText('vLabel','LISTENING');
+    try{recognition.start();}catch(_){}
+  }else{
+    $('vDot').className='vdot'; setText('vLabel','MUTED');
+  }
 }
-$('jSendBtn').addEventListener('click',sendText);
-$('jTextInput').addEventListener('keydown',e=>{if(e.key==='Enter')sendText();});
+
+// Text input
+function sendText(){const inp=$('jwInput'),msg=inp.value.trim();if(!msg)return;inp.value='';sendToJarvis(msg);}
+$('jwSend').addEventListener('click',sendText);
+$('jwInput').addEventListener('keydown',e=>{if(e.key==='Enter')sendText();});
 
 // ── Settings modal ────────────────────────────────────────────
 const WATER_KEY='po_water_v1', WHOOP_KEY='whoop_tokens_v1', SYNC_KEY='whoop_last_sync';
-function defaultWater(){ return {unit:'bottle',bottleMl:500,glassMl:250,weightUnit:'kg',profile:{weightKg:75,age:25,sex:'m',activityHrsPerWeek:5},caffeineMgPerDay:200,substances:[],logs:{}}; }
-let heightUnit='cm', wghtUnit='kg', sex='m';
-function setHeightUnit(u){ heightUnit=u; $('heightUnitSeg').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.u===u)); if(u==='cm'){$('heightA').placeholder='cm';$('heightB').style.display='none';}else{$('heightA').placeholder='ft';$('heightB').placeholder='in';$('heightB').style.display='';} }
-function setWeightUnit(u){ wghtUnit=u; $('weightUnitSeg').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.u===u)); }
-function setSex(s){ sex=s; $('sexSeg').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.s===s)); }
-function getHeightCm(){ if(heightUnit==='cm'){const v=parseFloat($('heightA').value);return v>0?v:null;} const ft=parseFloat($('heightA').value)||0,inch=parseFloat($('heightB').value)||0,cm=ft*30.48+inch*2.54;return cm>0?Math.round(cm):null; }
-function fillHeight(cm){ if(!cm){$('heightA').value='';$('heightB').value='';return;} if(heightUnit==='cm'){$('heightA').value=Math.round(cm);}else{const ti=cm/2.54;$('heightA').value=Math.floor(ti/12);$('heightB').value=Math.round(ti%12);} }
-function populate(){ const w=loadJSON(WATER_KEY,defaultWater()),p=w.profile||{}; setWeightUnit(w.weightUnit==='lb'?'lb':'kg'); setHeightUnit(p.heightUnit==='ft'?'ft':'cm'); setSex(p.sex==='f'?'f':'m'); fillHeight(p.heightCm||null); if(p.weightKg)$('weight').value=wghtUnit==='lb'?Math.round(p.weightKg*2.20462):Math.round(p.weightKg);else $('weight').value=''; $('age').value=p.age||''; $('activity').value=p.activityHrsPerWeek!=null?p.activityHrsPerWeek:''; }
-function saveSettings(){ const w=loadJSON(WATER_KEY,defaultWater());w.profile=w.profile||{}; const cm=getHeightCm();if(cm){w.profile.heightCm=cm;w.profile.heightUnit=heightUnit;} const wv=parseFloat($('weight').value);if(wv>0){w.profile.weightKg=wghtUnit==='lb'?+(wv/2.20462).toFixed(1):wv;w.weightUnit=wghtUnit;} const age=parseInt($('age').value,10);if(age>0)w.profile.age=age; w.profile.sex=sex; const act=parseFloat($('activity').value);if(act>=0&&!isNaN(act))w.profile.activityHrsPerWeek=act; saveJSON(WATER_KEY,w); const s=$('settingsStatus');s.textContent='Saved ✓';setTimeout(()=>{s.textContent='';},1800); }
-function openSettings(){ populate(); renderWhoop(); $('settingsBg').classList.add('show'); syncWhoop(); }
-function closeSettings(){ $('settingsBg').classList.remove('show'); }
+function defaultWater(){return{unit:'bottle',bottleMl:500,glassMl:250,weightUnit:'kg',profile:{weightKg:75,age:25,sex:'m',activityHrsPerWeek:5},caffeineMgPerDay:200,substances:[],logs:{}};}
+let heightUnit='cm',wghtUnit='kg',sex='m';
+function setHeightUnit(u){heightUnit=u;$('heightUnitSeg').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.u===u));if(u==='cm'){$('heightA').placeholder='cm';$('heightB').style.display='none';}else{$('heightA').placeholder='ft';$('heightB').placeholder='in';$('heightB').style.display='';}}
+function setWeightUnit(u){wghtUnit=u;$('weightUnitSeg').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.u===u));}
+function setSex(s){sex=s;$('sexSeg').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.s===s));}
+function getHeightCm(){if(heightUnit==='cm'){const v=parseFloat($('heightA').value);return v>0?v:null;}const ft=parseFloat($('heightA').value)||0,inch=parseFloat($('heightB').value)||0,cm=ft*30.48+inch*2.54;return cm>0?Math.round(cm):null;}
+function fillHeight(cm){if(!cm){$('heightA').value='';$('heightB').value='';return;}if(heightUnit==='cm'){$('heightA').value=Math.round(cm);}else{const ti=cm/2.54;$('heightA').value=Math.floor(ti/12);$('heightB').value=Math.round(ti%12);}}
+function populate(){const w=loadJSON(WATER_KEY,defaultWater()),p=w.profile||{};setWeightUnit(w.weightUnit==='lb'?'lb':'kg');setHeightUnit(p.heightUnit==='ft'?'ft':'cm');setSex(p.sex==='f'?'f':'m');fillHeight(p.heightCm||null);if(p.weightKg)$('weight').value=wghtUnit==='lb'?Math.round(p.weightKg*2.20462):Math.round(p.weightKg);else $('weight').value='';$('age').value=p.age||'';$('activity').value=p.activityHrsPerWeek!=null?p.activityHrsPerWeek:'';}
+function saveSettings(){const w=loadJSON(WATER_KEY,defaultWater());w.profile=w.profile||{};const cm=getHeightCm();if(cm){w.profile.heightCm=cm;w.profile.heightUnit=heightUnit;}const wv=parseFloat($('weight').value);if(wv>0){w.profile.weightKg=wghtUnit==='lb'?+(wv/2.20462).toFixed(1):wv;w.weightUnit=wghtUnit;}const age=parseInt($('age').value,10);if(age>0)w.profile.age=age;w.profile.sex=sex;const act=parseFloat($('activity').value);if(act>=0&&!isNaN(act))w.profile.activityHrsPerWeek=act;saveJSON(WATER_KEY,w);const s=$('settingsStatus');s.textContent='Saved ✓';setTimeout(()=>{s.textContent='';},1800);}
+function openSettings(){populate();renderWhoop();$('settingsBg').classList.add('show');syncWhoop();}
+function closeSettings(){$('settingsBg').classList.remove('show');}
 $('settingsOpen').addEventListener('click',openSettings);
-const so2=$('settingsOpen2'); if(so2) so2.addEventListener('click',e=>{e.preventDefault();openSettings();});
+const so2=$('settingsOpen2');if(so2)so2.addEventListener('click',e=>{e.preventDefault();openSettings();});
 $('settingsClose').addEventListener('click',closeSettings);
 $('settingsBg').addEventListener('click',e=>{if(e.target===$('settingsBg'))closeSettings();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSettings();});
@@ -994,12 +1044,12 @@ $('sexSeg').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=
 
 // WHOOP
 let whStats=null;
-function relTime(ts){ if(!ts)return'never';const s=Math.floor((Date.now()-ts)/1000);if(s<60)return'just now';if(s<3600)return Math.floor(s/60)+' min ago';if(s<86400)return Math.floor(s/3600)+' h ago';return Math.floor(s/86400)+' d ago'; }
-function renderWhoop(err){ const t=loadJSON(WHOOP_KEY,null),statusEl=$('whStatus'),txt=$('whStatusText'),syncEl=$('whSync'),action=$('whAction'); if(!t||!t.access){statusEl.classList.remove('on');txt.textContent='Not connected';syncEl.textContent='';$('whStats').style.display='none';action.textContent='Connect on Health page';return;} statusEl.classList.add('on');txt.textContent=err?'Connected (sync failed)':'Connected';const last=Number(localStorage.getItem(SYNC_KEY))||0;syncEl.textContent='Last synced '+relTime(last);action.textContent='Sync now'; if(whStats){$('whStats').style.display='';$('whRec').textContent=whStats.rec!=null?whStats.rec+'%':'—';$('whSleep').textContent=whStats.sleep!=null?whStats.sleep+'%':'—';$('whRhr').textContent=whStats.rhr!=null?whStats.rhr:'—';} }
-async function wRefresh(t){ if(!t.refresh)return null; try{const r=await fetch('/api/whoop-refresh',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({refresh_token:t.refresh})});const j=await r.json();if(j.access_token){const n={access:j.access_token,refresh:j.refresh_token||t.refresh,expires:Date.now()+(j.expires_in||3500)*1000};saveJSON(WHOOP_KEY,n);return n;}}catch(e){}return null; }
-async function wFetch(path,t){ const[p,qs]=path.split('?');const params=new URLSearchParams(qs||'');params.set('path',p);const r=await fetch('/api/whoop-data?'+params.toString(),{headers:{'Authorization':'Bearer '+t.access,'Accept':'application/json'}});if(r.status===401){const n=await wRefresh(t);if(n)return wFetch(path,n);throw new Error('unauthorized');}if(!r.ok)throw new Error('whoop '+r.status);return r.json(); }
-async function syncWhoop(){ let t=loadJSON(WHOOP_KEY,null);if(!t||!t.access)return;if(t.expires&&Date.now()>t.expires-60000){const n=await wRefresh(t);if(n)t=n;} try{const[rec,sleep]=await Promise.all([wFetch('/recovery?limit=1',t).catch(()=>null),wFetch('/activity/sleep?limit=1',t).catch(()=>null)]);const r0=rec&&rec.records&&rec.records[0];const s0=sleep&&sleep.records&&sleep.records[0];whStats={rec:r0&&r0.score&&r0.score.recovery_score!=null?Math.round(r0.score.recovery_score):null,rhr:r0&&r0.score&&r0.score.resting_heart_rate!=null?Math.round(r0.score.resting_heart_rate):null,sleep:s0&&s0.score&&s0.score.sleep_performance_percentage!=null?Math.round(s0.score.sleep_performance_percentage):null};localStorage.setItem(SYNC_KEY,String(Date.now()));renderWhoop();}catch(e){renderWhoop(e);} }
-$('whAction').addEventListener('click',()=>{ const t=loadJSON(WHOOP_KEY,null);if(!t||!t.access){window.location.href='health.html';return;}$('whAction').textContent='Syncing…';syncWhoop(); });
+function relTime(ts){if(!ts)return'never';const s=Math.floor((Date.now()-ts)/1000);if(s<60)return'just now';if(s<3600)return Math.floor(s/60)+' min ago';if(s<86400)return Math.floor(s/3600)+' h ago';return Math.floor(s/86400)+' d ago';}
+function renderWhoop(err){const t=loadJSON(WHOOP_KEY,null),sEl=$('whStatus'),txt=$('whStatusText'),syncEl=$('whSync'),action=$('whAction');if(!t||!t.access){sEl.classList.remove('on');txt.textContent='Not connected';syncEl.textContent='';$('whStats').style.display='none';action.textContent='Connect on Health page';return;}sEl.classList.add('on');txt.textContent=err?'Connected (sync failed)':'Connected';const last=Number(localStorage.getItem(SYNC_KEY))||0;syncEl.textContent='Last synced '+relTime(last);action.textContent='Sync now';if(whStats){$('whStats').style.display='';$('whRec').textContent=whStats.rec!=null?whStats.rec+'%':'—';$('whSleep').textContent=whStats.sleep!=null?whStats.sleep+'%':'—';$('whRhr').textContent=whStats.rhr!=null?whStats.rhr:'—';}}
+async function wRefresh(t){if(!t.refresh)return null;try{const r=await fetch('/api/whoop-refresh',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({refresh_token:t.refresh})});const j=await r.json();if(j.access_token){const n={access:j.access_token,refresh:j.refresh_token||t.refresh,expires:Date.now()+(j.expires_in||3500)*1000};saveJSON(WHOOP_KEY,n);return n;}}catch(e){}return null;}
+async function wFetch(path,t){const[p,qs]=path.split('?');const params=new URLSearchParams(qs||'');params.set('path',p);const r=await fetch('/api/whoop-data?'+params.toString(),{headers:{'Authorization':'Bearer '+t.access,'Accept':'application/json'}});if(r.status===401){const n=await wRefresh(t);if(n)return wFetch(path,n);throw new Error('unauthorized');}if(!r.ok)throw new Error('whoop '+r.status);return r.json();}
+async function syncWhoop(){let t=loadJSON(WHOOP_KEY,null);if(!t||!t.access)return;if(t.expires&&Date.now()>t.expires-60000){const n=await wRefresh(t);if(n)t=n;}try{const[rec,sleep]=await Promise.all([wFetch('/recovery?limit=1',t).catch(()=>null),wFetch('/activity/sleep?limit=1',t).catch(()=>null)]);const r0=rec&&rec.records&&rec.records[0];const s0=sleep&&sleep.records&&sleep.records[0];whStats={rec:r0&&r0.score&&r0.score.recovery_score!=null?Math.round(r0.score.recovery_score):null,rhr:r0&&r0.score&&r0.score.resting_heart_rate!=null?Math.round(r0.score.resting_heart_rate):null,sleep:s0&&s0.score&&s0.score.sleep_performance_percentage!=null?Math.round(s0.score.sleep_performance_percentage):null};localStorage.setItem(SYNC_KEY,String(Date.now()));renderWhoop();}catch(e){renderWhoop(e);}}
+$('whAction').addEventListener('click',()=>{const t=loadJSON(WHOOP_KEY,null);if(!t||!t.access){window.location.href='health.html';return;}$('whAction').textContent='Syncing…';syncWhoop();});
 
 })();
 </script>
