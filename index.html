@@ -381,7 +381,7 @@ body::after {
     <div class="head-right">
       <div class="sys-pill"><div class="sys-dot"></div> SYSTEM ONLINE</div>
       <div class="head-time" id="headTime">—</div>
-      <div class="sync-badge" id="syncBadge">loading…</div>
+      <div class="sync-badge" id="syncBadge" title="Click to refresh now" style="cursor:pointer">loading…</div>
       <button class="gear-btn" id="settingsOpen" title="Settings">⚙</button>
     </div>
   </header>
@@ -841,6 +841,7 @@ async function loadAll() {
   syncing=false;
 }
 setInterval(()=>{ countdown--; if(countdown<=0){countdown=POLL_SEC;loadAll();} },1000);
+$('syncBadge').addEventListener('click',()=>{ countdown=0; loadAll(); });
 loadAll();
 
 // ── Kanban ────────────────────────────────────────────────────
