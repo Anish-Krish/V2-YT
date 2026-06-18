@@ -51,7 +51,21 @@ const SQL_STAGES = new Set([
 
 // ── Date helpers ─────────────────────────────────────────────────
 
-function isoToday()      { return new Date().toISOString().slice(0, 10); }
+// Return epoch-ms strings for HubSpot BETWEEN filters.
+// HubSpot interprets bare ISO date strings as midnight UTC, so calls/meetings
+// made during business hours on "today" get excluded. Use actual timestamps.
+function msNow()        { return String(Date.now()); }
+function msMonthStart() {
+  const n = new Date();
+  return String(new Date(n.getFullYear(), n.getMonth(), 1).getTime());
+}
+function msWeekStart() {
+  const n = new Date(), dow = n.getDay();
+  const mon = new Date(n);
+  mon.setDate(n.getDate() - (dow === 0 ? 6 : dow - 1));
+  mon.setHours(0, 0, 0, 0);
+  return String(mon.getTime());
+}
 function isoMonthStart() {
   const n = new Date();
   return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-01`;
@@ -106,22 +120,24 @@ function tallyFunnel(calls) {
 
 // ── Search helpers ────────────────────────────────────────────────
 
-function searchMeetings(token, ownerId, start, end) {
+// start/end are epoch-ms strings. highValue always uses Date.now() so we never
+// cut off activity from earlier today.
+function searchMeetings(token, ownerId, startMs) {
   return hsSearch(token, 'meetings', {
     filterGroups: [{ filters: [
       { propertyName: 'hubspot_owner_id', operator: 'EQ',      value: ownerId },
-      { propertyName: 'hs_createdate',    operator: 'BETWEEN', value: start, highValue: end },
+      { propertyName: 'hs_createdate',    operator: 'BETWEEN', value: startMs, highValue: msNow() },
     ]}],
     properties: ['hs_meeting_title', 'hs_createdate', 'hubspot_owner_id'],
   });
 }
 
-function searchCalls(token, ownerId, start, end) {
+function searchCalls(token, ownerId, startMs) {
   return hsSearch(token, 'calls', {
     filterGroups: [{ filters: [
       { propertyName: 'hubspot_owner_id',  operator: 'EQ',      value: ownerId },
       { propertyName: 'hs_call_direction', operator: 'EQ',      value: 'OUTBOUND' },
-      { propertyName: 'hs_createdate',     operator: 'BETWEEN', value: start, highValue: end },
+      { propertyName: 'hs_createdate',     operator: 'BETWEEN', value: startMs, highValue: msNow() },
     ]}],
     properties: ['hs_createdate', 'hubspot_owner_id', 'hs_call_disposition'],
   });
@@ -142,27 +158,27 @@ function searchDeals(token, monthStart) {
 // ── Main: 9 sequential calls, 300 ms apart ────────────────────────
 
 async function getAll(token) {
-  const ms  = isoMonthStart();
-  const td  = isoToday();
-  const ws  = isoWeekStart();
-  const dow = new Date().getDay();
-  const michFloor = ms > MICHELLE_CALL_FLOOR ? ms : MICHELLE_CALL_FLOOR;
+  const mMs  = msMonthStart();
+  const wMs  = msWeekStart();
+  const dow  = new Date().getDay();
+  // Michelle's floor: whichever is later — month start or MICHELLE_CALL_FLOOR
+  const michFloorMs = String(Math.max(Number(mMs), new Date(MICHELLE_CALL_FLOOR).getTime()));
 
   const w = ms2 => new Promise(r => setTimeout(r, ms2));
 
   // 1–3: Monthly meetings + deals
-  const anishMtgsM    = await searchMeetings(token, ANISH_ID,    ms, td);      await w(300);
-  const michelleMtgsM = await searchMeetings(token, MICHELLE_ID, ms, td);      await w(300);
-  const deals         = await searchDeals(token, ms);                           await w(300);
+  const anishMtgsM    = await searchMeetings(token, ANISH_ID,    mMs);      await w(300);
+  const michelleMtgsM = await searchMeetings(token, MICHELLE_ID, mMs);      await w(300);
+  const deals         = await searchDeals(token, isoMonthStart());           await w(300);
   // 4–5: Weekly calls
-  const anishCallsW   = await searchCalls(token, ANISH_ID,    ws, td);         await w(300);
-  const michelleCallsW = await searchCalls(token, MICHELLE_ID, ws, td);        await w(300);
+  const anishCallsW   = await searchCalls(token, ANISH_ID,    wMs);         await w(300);
+  const michelleCallsW = await searchCalls(token, MICHELLE_ID, wMs);        await w(300);
   // 6–7: Weekly meetings
-  const anishMtgsW    = await searchMeetings(token, ANISH_ID,    ws, td);      await w(300);
-  const michelleMtgsW = await searchMeetings(token, MICHELLE_ID, ws, td);      await w(300);
+  const anishMtgsW    = await searchMeetings(token, ANISH_ID,    wMs);      await w(300);
+  const michelleMtgsW = await searchMeetings(token, MICHELLE_ID, wMs);      await w(300);
   // 8–9: Monthly calls (for full-month funnel)
-  const anishCallsM   = await searchCalls(token, ANISH_ID,    ms, td);         await w(300);
-  const michelleCallsM = await searchCalls(token, MICHELLE_ID, michFloor, td);
+  const anishCallsM   = await searchCalls(token, ANISH_ID,    mMs);         await w(300);
+  const michelleCallsM = await searchCalls(token, MICHELLE_ID, michFloorMs);
 
   // ── Bar chart grouping (weekly calls) ─────────────────────────
   const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
@@ -245,8 +261,8 @@ async function countSearch(token, objectType, filters) {
 }
 
 async function getContacts(token) {
-  const ws  = isoWeekStart();
-  const td  = isoToday();
+  const wMs = msWeekStart();
+  const now = msNow();
   const w   = ms2 => new Promise(r => setTimeout(r, ms2));
 
   const anishEnrolled    = await countSearch(token, 'contacts', [
@@ -261,12 +277,12 @@ async function getContacts(token) {
   await w(300);
   const anishAdded    = await countSearch(token, 'contacts', [
     { propertyName: 'hubspot_owner_id', operator: 'EQ',      value: ANISH_ID },
-    { propertyName: 'createdate',       operator: 'BETWEEN', value: ws, highValue: td },
+    { propertyName: 'createdate',       operator: 'BETWEEN', value: wMs, highValue: now },
   ]);
   await w(300);
   const michelleAdded = await countSearch(token, 'contacts', [
     { propertyName: 'hubspot_owner_id', operator: 'EQ',      value: MICHELLE_ID },
-    { propertyName: 'createdate',       operator: 'BETWEEN', value: ws, highValue: td },
+    { propertyName: 'createdate',       operator: 'BETWEEN', value: wMs, highValue: now },
   ]);
 
   return {
