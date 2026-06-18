@@ -187,9 +187,9 @@ async function getAll(token) {
     if (SQL_STAGES.has(stage)) sqls++;
   }
 
-  // Days *completed* this week. Current day is in-progress so subtract 1 (Mon-Thu).
-  // Fri/Sat/Sun = full week done.
-  const daysElapsed = (dow === 0 || dow >= 5) ? 5 : Math.max(1, dow - 1);
+  // Days worked so far this week including today (calls already fetched include today).
+  // Mon=1, Tue=2, Wed=3, Thu=4, Fri/Sat/Sun=5.
+  const daysElapsed = (dow === 0 || dow >= 5) ? 5 : Math.max(1, dow);
 
   // ── 4-week trend (always exactly 4 bars, zeros for empty weeks) ──
   const buckets = {};
