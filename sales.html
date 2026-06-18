@@ -434,6 +434,7 @@ const POLL_SEC  = 300; // 5 minutes
 
 let countdown = POLL_SEC;
 let pollTimer  = null;
+let syncing    = false; // prevent stacked concurrent fetches
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -541,6 +542,8 @@ async function fetchJSON(url) {
 }
 
 async function loadAll() {
+  if (syncing) return;
+  syncing = true;
   hideError();
   setLoading(true);
 
@@ -564,6 +567,7 @@ async function loadAll() {
   }
 
   setLoading(false);
+  syncing = false;
 }
 
 // ── Countdown + auto-poll ────────────────────────────────────────

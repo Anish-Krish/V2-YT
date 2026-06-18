@@ -121,15 +121,15 @@ async function getAll(token) {
   const dow = new Date().getDay();
   const michelleCutoff = ms > MICHELLE_CALL_FLOOR ? ms : MICHELLE_CALL_FLOOR;
 
-  // Fully sequential — one HubSpot search at a time.
-  // HubSpot enforces a per-second rate limit; sequential calls with natural
-  // network latency (~150–300 ms each) stay well under it.
-  const anishMtgsM    = await searchMeetings(token, ANISH_ID,    ms, td);
-  const michelleMtgsM = await searchMeetings(token, MICHELLE_ID, ms, td);
-  const deals         = await searchDeals(token, ms);
-  const anishCalls    = await searchCalls(token, ANISH_ID,    ws, td);
-  const michelleCalls = await searchCalls(token, MICHELLE_ID, ws, td);
-  const anishMtgsW    = await searchMeetings(token, ANISH_ID,    ws, td);
+  // Sequential with explicit 300ms gap — guarantees ≤ 3.3 req/s regardless of
+  // how fast HubSpot responds, and handles pagination (each page = 1 request).
+  const w = ms2 => new Promise(r => setTimeout(r, ms2));
+  const anishMtgsM    = await searchMeetings(token, ANISH_ID,    ms, td); await w(300);
+  const michelleMtgsM = await searchMeetings(token, MICHELLE_ID, ms, td); await w(300);
+  const deals         = await searchDeals(token, ms);                      await w(300);
+  const anishCalls    = await searchCalls(token, ANISH_ID,    ws, td);    await w(300);
+  const michelleCalls = await searchCalls(token, MICHELLE_ID, ws, td);    await w(300);
+  const anishMtgsW    = await searchMeetings(token, ANISH_ID,    ws, td); await w(300);
   const michelleMtgsW = await searchMeetings(token, MICHELLE_ID, ws, td);
 
   // ── Process monthly ──────────────────────────────────────────
