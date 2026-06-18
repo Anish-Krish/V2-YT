@@ -99,15 +99,15 @@ body::after {
 .nav-link.active { color: var(--cyan); background: rgba(0,212,255,0.08); border-left-color: var(--cyan); }
 .nav-hr { margin: 10px 20px; border: 0; border-top: 1px solid var(--card-border); }
 
-/* ── Main scrollable area (no sidebar column) ─────────────────── */
-.body-wrap { flex: 1; }
+/* ── Main scrollable area ─────────────────────────────────────── */
+.body-wrap { flex: 1; display: flex; justify-content: center; overflow-y: auto; }
 .j-main {
+  width: 100%; max-width: 1300px;
   padding: 16px 20px 40px;
   display: grid;
   grid-template-columns: 1fr 316px;
   gap: 14px;
   align-content: start;
-  max-width: 1340px;
 }
 
 /* ── Cards ─────────────────────────────────────────────────────── */
@@ -821,13 +821,14 @@ function renderMonthly(d) { renderFunnel('mFunnelAnish',d.anish); renderFunnel('
 function renderWeekly(d)  { renderBarChart(d.byDay); renderFunnel('wFunnelAnish',d.anish); renderFunnel('wFunnelMichelle',d.michelle); }
 
 // ── HubSpot sync ──────────────────────────────────────────────
-let syncing=false, countdown=300;
+let syncing=false, countdown=300, hsData=null;
 const POLL_SEC=300;
 async function loadAll() {
   if(syncing) return; syncing=true; setText('syncBadge','syncing…');
   $('errBanner').classList.remove('show');
   try {
     const data=await fetch('/api/hubspot?type=all').then(async r=>{const j=await r.json();if(!r.ok)throw new Error(j.error||`HTTP ${r.status}`);return j;});
+    hsData=data;
     renderMonthly(data.monthly); renderWeekly(data.weekly);
     updateSprints(data); saveTrend(data);
     setText('syncBadge','Synced '+new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}));
@@ -985,8 +986,29 @@ async function sendToJarvis(msg){
   appendChat('user',msg);
   chatHistory.push({role:'user',content:msg});
 
+  // Snapshot current dashboard data so JARVIS can answer metric questions
+  const snap = hsData ? {
+    weekMeetings: hsData.weekly.weekMeetings,
+    weekGoal: 10,
+    anishWeekDials: hsData.weekly.anish.dials,
+    michelleWeekDials: hsData.weekly.michelle.dials,
+    anishWeekMeetings: hsData.weekly.anish.meetings,
+    michelleWeekMeetings: hsData.weekly.michelle.meetings,
+    anishAvgDials: hsData.weekly.anish.avgDials,
+    michelleAvgDials: hsData.weekly.michelle.avgDials,
+    anishConnects: hsData.weekly.anish.connects,
+    michelleConnects: hsData.weekly.michelle.connects,
+    monthlyAppts: hsData.monthly.appts,
+    anishMonthlyAppts: hsData.monthly.apptAnish,
+    michelleMonthlyAppts: hsData.monthly.apptMichelle,
+    monthlyMqls: hsData.monthly.mqls,
+    monthlySqls: hsData.monthly.sqls,
+    anishMonthlyDials: hsData.monthly.anish.dials,
+    michelleMonthlyDials: hsData.monthly.michelle.dials,
+  } : null;
+
   try{
-    const r=await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,history:chatHistory.slice(0,-1)})});
+    const r=await fetch('/api/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,history:chatHistory.slice(0,-1),dashSnap:snap})});
     const d=await r.json();
     if(!r.ok) throw new Error(d.error||`HTTP ${r.status}`);
     const reply=d.reply||'—';
