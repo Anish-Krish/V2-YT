@@ -34,10 +34,6 @@ const PAST_PITCH_DISPOSITIONS = new Set([
 ]);
 const MEETING_SET_DISPOSITION = 'cd510b3a-be32-4546-b3d8-9f14c1d8c349';
 
-// ── Meeting exclusion rules ───────────────────────────────────────
-const MTG_EXCLUDE_WORDS  = ['round 1', 'round 2', 'interview'];
-const MTG_EXCLUDE_SUFFIX = 'and anish krishanthan';
-
 // ── Deal stages ───────────────────────────────────────────────────
 const MQL_STAGES = new Set([
   '1129362176', '1129362177',
@@ -70,39 +66,6 @@ function isoMonthStart() {
   const n = new Date();
   return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-01`;
 }
-function isoWeekStart() {
-  const n = new Date(), dow = n.getDay();
-  const mon = new Date(n);
-  mon.setDate(n.getDate() - (dow === 0 ? 6 : dow - 1));
-  return mon.toISOString().slice(0, 10);
-}
-
-// ── Meeting helpers ───────────────────────────────────────────────
-
-function normTitle(s) { return (s || '').toLowerCase().replace(/[^a-z0-9\s]/g, '').trim(); }
-function isSalesMeeting(title) {
-  const t = (title || '').toLowerCase().trim();
-  if (MTG_EXCLUDE_WORDS.some(kw => t.includes(kw))) return false;
-  if (t.endsWith(MTG_EXCLUDE_SUFFIX)) return false;
-  return true;
-}
-function countMeetings(records, ownerId) {
-  const seen = new Set();
-  let count = 0;
-  for (const r of records) {
-    const p = r.properties;
-    if (ownerId && p.hubspot_owner_id !== ownerId) continue;
-    if (!isSalesMeeting(p.hs_meeting_title)) continue;
-    // Use HubSpot record ID as the unique key — title+date dedup was incorrectly
-    // collapsing distinct meetings that happened to share a common title (e.g. "Discovery Call")
-    // on the same day.
-    if (seen.has(r.id)) continue;
-    seen.add(r.id);
-    count++;
-  }
-  return count;
-}
-
 // ── Call tally ────────────────────────────────────────────────────
 
 function tallyFunnel(calls) {
@@ -119,18 +82,6 @@ function tallyFunnel(calls) {
 }
 
 // ── Search helpers ────────────────────────────────────────────────
-
-// start/end are epoch-ms strings. highValue always uses Date.now() so we never
-// cut off activity from earlier today.
-function searchMeetings(token, ownerId, startMs) {
-  return hsSearch(token, 'meetings', {
-    filterGroups: [{ filters: [
-      { propertyName: 'hubspot_owner_id', operator: 'EQ',      value: ownerId },
-      { propertyName: 'hs_createdate',    operator: 'BETWEEN', value: startMs, highValue: msNow() },
-    ]}],
-    properties: ['hs_meeting_title', 'hs_createdate', 'hubspot_owner_id'],
-  });
-}
 
 function searchCalls(token, ownerId, startMs) {
   // No direction filter — manually logged calls and some dialing tools don't set
@@ -167,18 +118,13 @@ async function getAll(token) {
 
   const w = ms2 => new Promise(r => setTimeout(r, ms2));
 
-  // 1–3: Monthly meetings + deals
-  const anishMtgsM    = await searchMeetings(token, ANISH_ID,    mMs);      await w(300);
-  const michelleMtgsM = await searchMeetings(token, MICHELLE_ID, mMs);      await w(300);
-  const deals         = await searchDeals(token, isoMonthStart());           await w(300);
-  // 4–5: Weekly calls
-  const anishCallsW   = await searchCalls(token, ANISH_ID,    wMs);         await w(300);
-  const michelleCallsW = await searchCalls(token, MICHELLE_ID, wMs);        await w(300);
-  // 6–7: Weekly meetings
-  const anishMtgsW    = await searchMeetings(token, ANISH_ID,    wMs);      await w(300);
-  const michelleMtgsW = await searchMeetings(token, MICHELLE_ID, wMs);      await w(300);
-  // 8–9: Monthly calls (for full-month funnel)
-  const anishCallsM   = await searchCalls(token, ANISH_ID,    mMs);         await w(300);
+  // 1: Deals
+  const deals          = await searchDeals(token, isoMonthStart());           await w(300);
+  // 2–3: Weekly calls
+  const anishCallsW    = await searchCalls(token, ANISH_ID,    wMs);         await w(300);
+  const michelleCallsW = await searchCalls(token, MICHELLE_ID, wMs);         await w(300);
+  // 4–5: Monthly calls (for full-month funnel + appointment counts)
+  const anishCallsM    = await searchCalls(token, ANISH_ID,    mMs);         await w(300);
   const michelleCallsM = await searchCalls(token, MICHELLE_ID, michFloorMs);
 
   // ── Bar chart grouping (weekly calls) ─────────────────────────
@@ -203,15 +149,16 @@ async function getAll(token) {
   console.log('[hubspot] raw counts', {
     anishCallsW: anishCallsW.length, michelleCallsW: michelleCallsW.length,
     anishCallsM: anishCallsM.length, michelleCallsM: michelleCallsM.length,
-    anishMtgsM: anishMtgsM.length,   michelleMtgsM: michelleMtgsM.length,
-    anishMtgsW: anishMtgsW.length,   michelleMtgsW: michelleMtgsW.length,
   });
 
-  // ── Meetings ──────────────────────────────────────────────────
-  const apptAnish    = countMeetings(anishMtgsM,    ANISH_ID);
-  const apptMichelle = countMeetings(michelleMtgsM, MICHELLE_ID);
-  const awm          = countMeetings(anishMtgsW,    ANISH_ID);
-  const mwm          = countMeetings(michelleMtgsW, MICHELLE_ID);
+  // ── Appointments = call disposition "meeting set" ─────────────
+  // Meeting objects in HubSpot inherit the contact's owner, not the BDR who made
+  // the call — so searching meeting objects attributes meetings to the wrong person.
+  // Call dispositions are always logged by the person who made the call: accurate.
+  const apptAnish    = mfa.meetingSet;
+  const apptMichelle = mfm.meetingSet;
+  const awm          = wfa.meetingSet;
+  const mwm          = wfm.meetingSet;
 
   // ── Deals ────────────────────────────────────────────────────
   let mqls = 0, sqls = 0;
