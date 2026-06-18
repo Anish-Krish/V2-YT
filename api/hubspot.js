@@ -133,11 +133,12 @@ function searchMeetings(token, ownerId, startMs) {
 }
 
 function searchCalls(token, ownerId, startMs) {
+  // No direction filter — manually logged calls and some dialing tools don't set
+  // hs_call_direction, so filtering OUTBOUND silently drops valid calls.
   return hsSearch(token, 'calls', {
     filterGroups: [{ filters: [
-      { propertyName: 'hubspot_owner_id',  operator: 'EQ',      value: ownerId },
-      { propertyName: 'hs_call_direction', operator: 'EQ',      value: 'OUTBOUND' },
-      { propertyName: 'hs_createdate',     operator: 'BETWEEN', value: startMs, highValue: msNow() },
+      { propertyName: 'hubspot_owner_id', operator: 'EQ',      value: ownerId },
+      { propertyName: 'hs_createdate',    operator: 'BETWEEN', value: startMs, highValue: msNow() },
     ]}],
     properties: ['hs_createdate', 'hubspot_owner_id', 'hs_call_disposition'],
   });
@@ -199,6 +200,13 @@ async function getAll(token) {
   const mfa = tallyFunnel(anishCallsM);
   const mfm = tallyFunnel(michelleCallsM);
 
+  console.log('[hubspot] raw counts', {
+    anishCallsW: anishCallsW.length, michelleCallsW: michelleCallsW.length,
+    anishCallsM: anishCallsM.length, michelleCallsM: michelleCallsM.length,
+    anishMtgsM: anishMtgsM.length,   michelleMtgsM: michelleMtgsM.length,
+    anishMtgsW: anishMtgsW.length,   michelleMtgsW: michelleMtgsW.length,
+  });
+
   // ── Meetings ──────────────────────────────────────────────────
   const apptAnish    = countMeetings(anishMtgsM,    ANISH_ID);
   const apptMichelle = countMeetings(michelleMtgsM, MICHELLE_ID);
@@ -242,7 +250,7 @@ async function getAll(token) {
         avgDials: +(wfm.dials / daysElapsed).toFixed(1),
       },
     },
-    meta: { michFloor },
+    meta: { michFloorMs },
   };
 }
 
