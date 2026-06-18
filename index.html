@@ -5,622 +5,625 @@
 <script src="/api/config"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#050506">
+<meta name="theme-color" content="#060A0F">
 <title>Jarvis</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
 <style>
+/* ── Variables ───────────────────────────────────────────────── */
 :root {
-  --text-primary:   #FAFAFA;
-  --text-secondary: #B8B6B0;
-  --text-tertiary:  #76746E;
-  --font:      -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --green:  #6BE3A4;
-  --blue:   #60A5FA;
+  --cyan:        #00D4FF;
+  --cyan-dim:    rgba(0,212,255,0.14);
+  --cyan-border: rgba(0,212,255,0.18);
+  --bg:          #060A0F;
+  --card-bg:     rgba(0,212,255,0.03);
+  --card-border: rgba(0,212,255,0.11);
+  --text-primary:   #DFF0FF;
+  --text-secondary: #5E8BA8;
+  --text-tertiary:  #2E546A;
+  --green:  #00E5A0;
   --amber:  #F2C063;
   --orange: #FB923C;
   --red:    #F87171;
-  --card-bg: rgba(255,255,255,0.04);
-  --card-border: rgba(255,255,255,0.07);
+  --blue:   #60A5FA;
+  --font:      -apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif;
+  --font-mono: ui-monospace,"SF Mono",Menlo,Consolas,monospace;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body {
-  background: #050506; color: var(--text-secondary);
-  font-family: var(--font); -webkit-font-smoothing: antialiased;
-}
-body {
-  min-height: 100vh; overflow-x: hidden;
-  padding: max(20px, env(safe-area-inset-top)) 18px 60px;
+html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text-secondary); font-family: var(--font); -webkit-font-smoothing: antialiased; }
+
+/* dot grid background */
+body::after {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image:
+    linear-gradient(rgba(0,212,255,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,255,0.035) 1px, transparent 1px);
+  background-size: 44px 44px;
 }
 body::before {
-  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: -2;
-  background:
-    radial-gradient(circle at 82% 14%, rgba(224,118,88,0.14), transparent 45%),
-    radial-gradient(circle at 18% 90%, rgba(180,180,200,0.05), transparent 50%);
-  filter: blur(40px);
-  animation: drift 36s ease-in-out infinite alternate;
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background: radial-gradient(circle at 50% 25%, rgba(0,212,255,0.05) 0%, transparent 55%);
 }
-body::after {
-  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: -1;
-  background-image: radial-gradient(rgba(255,255,255,0.012) 1px, transparent 1px);
-  background-size: 3px 3px;
-}
-@keyframes drift { 0%{transform:translate3d(0,0,0)} 100%{transform:translate3d(-22px,14px,0)} }
 
-.page { max-width: 1160px; margin: 0 auto; }
-
-/* ── Header ── */
-.hub-head {
-  display: flex; align-items: center; gap: 14px; margin-bottom: 20px;
-}
-.dash-title {
-  font-size: 26px; font-weight: 700; letter-spacing: -0.025em;
-  background: linear-gradient(180deg,#FFF 0%,#C7C4BC 120%);
-  -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent; flex-shrink: 0;
-}
-.mini-nav {
-  display: flex; gap: 6px; flex: 1;
-}
-.mini-nav a {
-  font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
-  color: var(--text-tertiary); text-decoration: none;
-  padding: 6px 12px; border-radius: 8px;
-  border: 1px solid transparent;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
-}
-.mini-nav a:hover {
-  color: var(--text-primary); background: rgba(255,255,255,0.05);
-  border-color: var(--card-border);
-}
-.head-right {
-  display: flex; align-items: center; gap: 10px; flex-shrink: 0;
-}
-.sync-badge {
-  font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary);
-  white-space: nowrap;
-}
-.gear-btn {
-  width: 38px; height: 38px; flex-shrink: 0;
-  display: inline-flex; align-items: center; justify-content: center;
-  border-radius: 10px; border: 1px solid rgba(255,255,255,0.09);
-  background: var(--card-bg); color: var(--text-secondary);
-  cursor: pointer; transition: background 0.15s, color 0.15s;
-}
-.gear-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
-.gear-btn svg { width: 18px; height: 18px; }
-
-/* ── Main grid ── */
-.cmd-grid {
+/* ── Layout shell ────────────────────────────────────────────── */
+.shell {
+  position: fixed; inset: 0; z-index: 1;
   display: grid;
-  grid-template-columns: 1fr 340px;
-  gap: 14px;
-  align-items: start;
-}
-@media (max-width: 900px) { .cmd-grid { grid-template-columns: 1fr; } }
-
-/* ── Cards ── */
-.card {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: 16px;
-  padding: 18px;
-  margin-bottom: 14px;
-}
-.card:last-child { margin-bottom: 0; }
-.card-label {
-  font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
-  color: var(--text-tertiary); margin-bottom: 14px; display: block;
+  grid-template-columns: 188px 1fr 308px;
+  grid-template-rows: 52px 1fr;
 }
 
-/* ── Sprint row ── */
-.sprint-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
-.sprint-card {
-  background: var(--card-bg); border: 1px solid var(--card-border);
-  border-radius: 14px; padding: 14px 16px;
+/* ── Header ──────────────────────────────────────────────────── */
+.j-head {
+  grid-column: 1 / -1;
+  display: flex; align-items: center;
+  background: rgba(6,10,15,0.95); border-bottom: 1px solid var(--card-border);
+  backdrop-filter: blur(14px); padding: 0 0 0 0; z-index: 20;
 }
-.sprint-name { font-size: 11px; color: var(--text-tertiary); font-weight: 600; letter-spacing: 0.04em; margin-bottom: 8px; }
-.sprint-status {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 13px; font-weight: 700; letter-spacing: 0.02em;
-  margin-bottom: 5px;
+.head-logo {
+  width: 188px; padding: 0 18px; flex-shrink: 0;
+  display: flex; align-items: center; gap: 10px;
+  border-right: 1px solid var(--card-border); height: 100%;
 }
-.sprint-status .dot { width: 7px; height: 7px; border-radius: 50%; }
-.sprint-status.on-track  { color: var(--green);  } .sprint-status.on-track  .dot { background: var(--green);  box-shadow: 0 0 8px var(--green); }
-.sprint-status.at-risk   { color: var(--amber);  } .sprint-status.at-risk   .dot { background: var(--amber);  box-shadow: 0 0 8px var(--amber); }
-.sprint-status.off-track { color: var(--red);    } .sprint-status.off-track .dot { background: var(--red);    box-shadow: 0 0 8px var(--red); }
-.sprint-detail { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
-.sprint-deadline { font-size: 11px; color: var(--text-tertiary); font-family: var(--font-mono); }
+.logo-ring-wrap { width: 26px; height: 26px; position: relative; }
+.logo-ring-wrap svg { animation: spin 10s linear infinite; width: 26px; height: 26px; }
+.logo-text { font-size: 13px; font-weight: 800; letter-spacing: 0.25em; color: var(--cyan); }
+.head-center { flex: 1; padding: 0 20px; }
+.head-greeting { font-size: 13px; color: var(--text-secondary); }
+.head-greeting strong { color: var(--text-primary); font-weight: 600; }
+.head-right {
+  display: flex; align-items: center; gap: 14px; padding: 0 16px;
+  border-left: 1px solid var(--card-border); height: 100%; flex-shrink: 0;
+}
+.sys-online { display: flex; align-items: center; gap: 6px; font-size: 11px; letter-spacing: 0.08em; color: var(--text-secondary); }
+.sys-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
+.head-time { font-size: 12px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.sync-badge { font-size: 11px; color: var(--text-tertiary); }
+.gear-btn { background: none; border: none; cursor: pointer; padding: 4px 6px; color: var(--text-tertiary); font-size: 16px; transition: color 0.2s; }
+.gear-btn:hover { color: var(--cyan); }
 
-/* ── KPI row ── */
-.kpi-row { display: flex; gap: 0; margin-bottom: 18px; }
-.kpi { flex: 1; padding: 0 16px; }
-.kpi:first-child { padding-left: 0; }
-.kpi:last-child  { padding-right: 0; }
-.kpi-val { font-size: 32px; font-weight: 700; color: var(--text-primary); line-height: 1; font-variant-numeric: tabular-nums; }
-.kpi-sub { font-size: 10px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: var(--text-tertiary); margin: 4px 0 3px; }
-.kpi-detail { font-size: 12px; color: var(--text-secondary); }
-.kpi-divider { width: 1px; background: var(--card-border); align-self: stretch; margin: 2px 0; }
+/* ── Sidebar ─────────────────────────────────────────────────── */
+.j-sidebar {
+  grid-column: 1; grid-row: 2;
+  background: rgba(2,6,12,0.9); border-right: 1px solid var(--card-border);
+  padding: 18px 0; display: flex; flex-direction: column; overflow: hidden;
+}
+.nav-link {
+  display: flex; align-items: center; gap: 11px;
+  padding: 10px 18px;
+  color: var(--text-tertiary); text-decoration: none;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  border-left: 2px solid transparent; transition: all 0.15s;
+}
+.nav-link:hover  { color: var(--cyan); background: rgba(0,212,255,0.05); }
+.nav-link.active { color: var(--cyan); background: rgba(0,212,255,0.08); border-left-color: var(--cyan); }
+.nav-icon { font-size: 14px; width: 16px; text-align: center; flex-shrink: 0; }
+.nav-sep { flex: 1; }
+.nav-hr { margin: 8px 18px; border: 0; border-top: 1px solid var(--card-border); }
 
-/* ── Section sub-header ── */
-.section-head {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 14px;
+/* ── Center ──────────────────────────────────────────────────── */
+.j-center {
+  grid-column: 2; grid-row: 2;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 20px 20px 14px; overflow: hidden; position: relative;
 }
-.section-badges { display: flex; gap: 12px; }
-.badge {
-  font-size: 11px; font-family: var(--font-mono); color: var(--text-tertiary);
-}
-.badge span { color: var(--text-primary); font-weight: 700; }
 
-/* ── Funnel ── */
-.funnel-title {
-  font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
-  color: var(--text-tertiary); margin: 16px 0 10px;
+/* Circular animation */
+.j-arc-wrap {
+  position: relative; width: 220px; height: 220px; flex-shrink: 0; margin-bottom: 16px;
 }
-.funnel-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.funnel-side-label {
-  font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--text-tertiary); margin-bottom: 8px;
+.arc { position: absolute; border-radius: 50%; }
+.arc-1 { inset: 0;   border: 1px  solid transparent; border-top-color: var(--cyan); border-right-color: rgba(0,212,255,0.3); animation: spin 5s linear infinite; }
+.arc-2 { inset: 18px; border: 1.5px solid transparent; border-bottom-color: rgba(0,212,255,0.75); border-left-color: rgba(0,212,255,0.2); animation: spin-r 8s linear infinite; }
+.arc-3 { inset: 34px; border: 1px  solid transparent; border-top-color: rgba(0,212,255,0.45); border-right-color: rgba(0,212,255,0.6); animation: spin 13s linear infinite; }
+.arc-4 { inset: 50px; border: 1px  solid transparent; border-bottom-color: rgba(0,212,255,0.25); animation: spin-r 19s linear infinite; }
+.arc-glow {
+  inset: 66px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,212,255,0.18) 0%, rgba(0,212,255,0.04) 60%, transparent 80%);
+  animation: pglow 3s ease-in-out infinite;
 }
-.funnel-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
-.funnel-label { font-size: 11px; color: var(--text-secondary); width: 76px; flex-shrink: 0; }
-.funnel-bar-track { flex: 1; height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
-.funnel-bar-fill  { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
-.funnel-num { font-size: 12px; font-weight: 700; color: var(--text-primary); width: 28px; text-align: right; font-variant-numeric: tabular-nums; }
+.arc-core {
+  inset: 82px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,212,255,0.28) 0%, rgba(0,212,255,0.06) 55%, transparent);
+  animation: pglow 2.2s ease-in-out infinite alternate;
+  display: flex; align-items: center; justify-content: center;
+}
+.arc-letter { font-size: 15px; font-weight: 800; letter-spacing: 0.2em; color: var(--cyan); text-shadow: 0 0 18px rgba(0,212,255,0.9); }
 
-/* ── Bar chart ── */
-.bar-chart {
-  display: flex; align-items: flex-end; gap: 8px;
-  height: 90px; margin-bottom: 10px;
-}
-.bar-day { display: flex; flex-direction: column; align-items: center; flex: 1; gap: 0; }
-.bar-group { display: flex; align-items: flex-end; gap: 2px; height: 72px; }
-.bar-col { width: 10px; border-radius: 3px 3px 0 0; min-height: 2px; transition: height 0.4s ease; }
-.bar-col.anish    { background: var(--green); }
-.bar-col.michelle { background: var(--blue); }
-.bar-nums { font-size: 9px; color: var(--text-tertiary); text-align: center; margin-top: 3px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.bar-lbl  { font-size: 10px; color: var(--text-tertiary); margin-top: 2px; }
-.chart-legend {
-  display: flex; gap: 14px; margin-bottom: 12px;
-}
-.legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-secondary); }
-.legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+/* listening state — rings accelerate + glow brighter */
+.j-arc-wrap.listening .arc-1 { animation-duration: 2s; border-width: 2px; }
+.j-arc-wrap.listening .arc-2 { animation-duration: 3.5s; border-width: 2px; }
+.j-arc-wrap.listening .arc-glow { background: radial-gradient(circle, rgba(0,212,255,0.32) 0%, rgba(0,212,255,0.08) 60%, transparent 80%); }
 
-/* ── Rolling trend ── */
-.trend-section { margin-bottom: 16px; }
-.trend-label { font-size: 10px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 10px; }
-.trend-chart { display: flex; align-items: flex-end; gap: 8px; }
-.trend-bar-wrap { display: flex; flex-direction: column; align-items: center; flex: 1; gap: 5px; }
-.trend-val { font-size: 12px; font-weight: 700; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
-.trend-bar {
-  width: 100%; border-radius: 4px 4px 0 0;
-  background: rgba(255,255,255,0.10); transition: height 0.5s ease;
-}
-.trend-bar.current { background: var(--green); box-shadow: 0 0 12px rgba(107,227,164,0.3); }
-.trend-week-lbl { font-size: 9px; color: var(--text-tertiary); text-align: center; }
+/* Voice status */
+.j-voice-info { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 14px; }
+.voice-status-row { display: flex; align-items: center; gap: 6px; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-tertiary); }
+.vdot { width: 5px; height: 5px; border-radius: 50%; background: var(--text-tertiary); }
+.vdot.live { background: var(--cyan); box-shadow: 0 0 7px var(--cyan); animation: blink 1.2s step-start infinite; }
+.vdot.proc { background: var(--amber); box-shadow: 0 0 7px var(--amber); animation: blink 0.5s step-start infinite; }
+@keyframes blink { 50% { opacity: 0; } }
 
-/* ── Kanban / tasks ── */
-.task-list { list-style: none; margin-bottom: 10px; }
-.task-item {
-  display: flex; align-items: center; gap: 9px;
-  padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+.j-wave { display: flex; align-items: center; gap: 3px; height: 22px; opacity: 0; transition: opacity 0.3s; }
+.j-wave.on { opacity: 1; }
+.wb { width: 3px; border-radius: 2px; background: var(--cyan); animation: wave 0.8s ease-in-out infinite; }
+.wb:nth-child(1){animation-delay:0s;   animation-duration:0.62s}
+.wb:nth-child(2){animation-delay:.09s; animation-duration:0.70s}
+.wb:nth-child(3){animation-delay:.18s; animation-duration:0.55s}
+.wb:nth-child(4){animation-delay:.27s; animation-duration:0.80s}
+.wb:nth-child(5){animation-delay:.36s; animation-duration:0.65s}
+.wb:nth-child(6){animation-delay:.18s; animation-duration:0.73s}
+.wb:nth-child(7){animation-delay:.09s; animation-duration:0.60s}
+.wb:nth-child(8){animation-delay:0s;   animation-duration:0.68s}
+@keyframes wave { 0%,100%{height:3px} 50%{height:20px} }
+
+/* Chat area */
+.j-chat {
+  flex: 1; width: 100%; max-width: 520px;
+  overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 4px 0;
+  min-height: 0;
 }
-.task-item:last-child { border-bottom: 0; }
-.task-check {
-  width: 16px; height: 16px; flex-shrink: 0; cursor: pointer;
-  border-radius: 4px; border: 1.5px solid rgba(255,255,255,0.18);
-  background: transparent; display: flex; align-items: center; justify-content: center;
-  transition: background 0.15s, border-color 0.15s;
+.j-chat::-webkit-scrollbar { width: 3px; }
+.j-chat::-webkit-scrollbar-thumb { background: var(--card-border); border-radius: 2px; }
+.chat-msg { display: flex; flex-direction: column; gap: 2px; max-width: 88%; }
+.chat-msg.user   { align-self: flex-end; align-items: flex-end; }
+.chat-msg.jarvis { align-self: flex-start; align-items: flex-start; }
+.chat-who { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-tertiary); padding: 0 4px; }
+.chat-bubble { padding: 8px 13px; border-radius: 12px; font-size: 13px; line-height: 1.55; }
+.chat-msg.user   .chat-bubble { background: rgba(0,212,255,0.13); border: 1px solid rgba(0,212,255,0.22); color: var(--text-primary); }
+.chat-msg.jarvis .chat-bubble { background: rgba(255,255,255,0.035); border: 1px solid var(--card-border); color: var(--text-secondary); }
+.chat-empty { color: var(--text-tertiary); font-size: 12px; text-align: center; padding: 20px 0; opacity: 0.7; }
+
+/* Live transcript strip */
+.j-transcript { min-height: 16px; font-size: 12px; color: var(--text-tertiary); font-style: italic; text-align: center; max-width: 520px; width: 100%; margin-bottom: 4px; }
+
+/* Input row */
+.j-input-row { width: 100%; max-width: 520px; display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.j-input {
+  flex: 1; background: rgba(0,212,255,0.05); border: 1px solid var(--card-border);
+  border-radius: 22px; padding: 9px 18px; color: var(--text-primary); font-family: var(--font); font-size: 13px; outline: none;
+  transition: border-color 0.2s;
 }
+.j-input::placeholder { color: var(--text-tertiary); }
+.j-input:focus { border-color: rgba(0,212,255,0.35); background: rgba(0,212,255,0.07); }
+.j-send {
+  width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--card-border);
+  background: rgba(0,212,255,0.08); color: var(--cyan); cursor: pointer; font-size: 13px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s;
+}
+.j-send:hover { background: rgba(0,212,255,0.18); }
+.j-mic {
+  width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--card-border);
+  background: rgba(0,212,255,0.06); color: var(--text-tertiary); cursor: pointer; font-size: 14px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s;
+}
+.j-mic.on { background: rgba(0,212,255,0.18); border-color: var(--cyan); color: var(--cyan); animation: mic-pulse 2s ease-in-out infinite; }
+@keyframes mic-pulse { 0%,100%{box-shadow:0 0 8px rgba(0,212,255,0.25)} 50%{box-shadow:0 0 22px rgba(0,212,255,0.55)} }
+
+.voice-note { font-size: 10px; color: var(--text-tertiary); text-align: center; margin-top: 4px; max-width: 520px; width: 100%; }
+
+/* ── Right panel ─────────────────────────────────────────────── */
+.j-right {
+  grid-column: 3; grid-row: 2;
+  border-left: 1px solid var(--card-border);
+  overflow-y: auto; padding: 14px 12px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.j-right::-webkit-scrollbar { width: 3px; }
+.j-right::-webkit-scrollbar-thumb { background: var(--card-border); border-radius: 2px; }
+
+.jc { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; padding: 12px 12px 10px; }
+.jc-title {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-tertiary);
+  margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;
+}
+.jc-sub { font-size: 10px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--text-tertiary); }
+
+/* Sprint badges */
+.sprint-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 7px 0; border-bottom: 1px solid rgba(0,212,255,0.06); }
+.sprint-row:last-child { border-bottom: 0; }
+.sprint-name { font-size: 11px; color: var(--text-secondary); margin-bottom: 2px; }
+.sprint-detail { font-size: 10px; color: var(--text-tertiary); }
+.sprint-badge { font-size: 9px; font-weight: 700; letter-spacing: 0.08em; padding: 2px 7px; border-radius: 4px; white-space: nowrap; }
+.on-track  .sprint-badge { background: rgba(0,229,160,0.14); color: var(--green); }
+.at-risk   .sprint-badge { background: rgba(242,192,99,0.14); color: var(--amber); }
+.off-track .sprint-badge { background: rgba(248,113,113,0.14); color: var(--red); }
+
+/* Week metrics */
+.wm-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(0,212,255,0.06); }
+.wm-row:last-child { border-bottom: 0; }
+.wm-lbl { font-size: 11px; color: var(--text-secondary); }
+.wm-right { text-align: right; }
+.wm-val { font-size: 16px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1; }
+.wm-val.cyan  { color: var(--cyan); }
+.wm-val.green { color: var(--green); }
+.wm-note { font-size: 10px; color: var(--text-tertiary); }
+.prog-wrap { margin-top: 5px; }
+.prog-track { height: 3px; background: rgba(0,212,255,0.08); border-radius: 2px; }
+.prog-fill  { height: 100%; border-radius: 2px; background: var(--cyan); transition: width 0.5s; }
+.prog-fill.g { background: var(--green); }
+
+/* Deadline card */
+.dl-jcard { border-color: rgba(251,146,60,0.18); background: rgba(251,146,60,0.04); }
+.dl-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid rgba(251,146,60,0.08); }
+.dl-row:last-child { border-bottom: 0; }
+.dl-name { font-size: 11px; color: var(--text-secondary); }
+.dl-date { font-size: 10px; color: var(--text-tertiary); }
+.dl-badge { text-align: right; }
+.dl-num { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
+.dl-num.safe   { color: var(--green); }
+.dl-num.warn   { color: var(--amber); }
+.dl-num.urgent { color: var(--red); }
+.dl-unit { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-tertiary); }
+
+/* Kanban */
+.task-list { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.task-item { display: flex; align-items: center; gap: 7px; padding: 5px 8px; background: rgba(0,212,255,0.025); border: 1px solid rgba(0,212,255,0.07); border-radius: 7px; }
+.task-check { width: 13px; height: 13px; border-radius: 50%; border: 1.5px solid var(--text-tertiary); cursor: pointer; flex-shrink: 0; transition: all 0.2s; }
 .task-check.done { background: var(--green); border-color: var(--green); }
-.task-check.done::after { content: '✓'; font-size: 10px; color: #050506; font-weight: 800; }
-.task-text {
-  flex: 1; font-size: 13px; color: var(--text-primary); cursor: default;
-  transition: color 0.2s, text-decoration 0.2s;
-}
+.task-text { flex: 1; font-size: 11px; color: var(--text-secondary); }
 .task-text.done { color: var(--text-tertiary); text-decoration: line-through; }
-.task-del {
-  width: 18px; height: 18px; border: 0; background: transparent;
-  color: var(--text-tertiary); cursor: pointer; font-size: 16px; line-height: 1;
-  opacity: 0; transition: opacity 0.15s;
+.task-del { background: none; border: none; color: var(--text-tertiary); cursor: pointer; font-size: 13px; padding: 0 2px; opacity: 0.4; }
+.task-del:hover { opacity: 1; color: var(--red); }
+.add-row { display: flex; gap: 5px; margin-top: 7px; }
+.t-input {
+  flex: 1; background: rgba(0,212,255,0.04); border: 1px solid var(--card-border);
+  border-radius: 7px; padding: 5px 9px; font-size: 11px; color: var(--text-primary); outline: none; font-family: var(--font);
 }
-.task-item:hover .task-del { opacity: 1; }
-.add-task-row { display: flex; gap: 6px; }
-.task-input {
-  flex: 1; min-width: 0; background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08); border-radius: 9px;
-  padding: 8px 12px; color: var(--text-primary); font-family: inherit;
-  font-size: 13px; outline: none; transition: border-color 0.2s;
-}
-.task-input:focus { border-color: rgba(255,255,255,0.22); }
-.task-input::placeholder { color: var(--text-tertiary); }
-.add-btn {
-  width: 34px; height: 34px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(255,255,255,0.06); color: var(--text-primary);
-  font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-  transition: background 0.15s;
-}
-.add-btn:hover { background: rgba(255,255,255,0.12); }
+.t-input::placeholder { color: var(--text-tertiary); }
+.add-btn { background: rgba(0,212,255,0.08); border: 1px solid var(--card-border); border-radius: 7px; padding: 5px 9px; color: var(--cyan); cursor: pointer; font-size: 13px; font-weight: 700; }
 
-/* ── Deadlines ── */
-.deadline-card {
-  border-color: rgba(251,146,60,0.22);
-  background: rgba(251,146,60,0.04);
-}
-.deadline-row {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px;
-}
-.deadline-row:last-child { border-bottom: 0; }
-.deadline-lbl { color: var(--text-secondary); font-size: 12px; }
-.deadline-badge { text-align: right; flex-shrink: 0; }
-.deadline-num { font-size: 22px; font-weight: 800; color: var(--orange); font-variant-numeric: tabular-nums; line-height: 1; }
-.deadline-num.urgent { color: var(--red); }
-.deadline-num.safe   { color: var(--green); }
-.deadline-sub { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-tertiary); }
+/* Seq health */
+.seq-tbl { width: 100%; border-collapse: collapse; font-size: 11px; }
+.seq-tbl th { color: var(--text-tertiary); font-size: 9px; font-weight: 700; letter-spacing: 0.06em; padding: 2px 4px; text-align: center; }
+.seq-tbl th:first-child { text-align: left; }
+.seq-tbl td { padding: 5px 4px; border-top: 1px solid rgba(0,212,255,0.06); color: var(--text-secondary); font-size: 11px; }
+.seq-tbl td:first-child { font-size: 10px; }
+.av { text-align: center; font-weight: 700; color: var(--text-primary); }
+.s-inp { width: 38px; text-align: center; background: rgba(0,212,255,0.05); border: 1px solid var(--card-border); border-radius: 5px; padding: 3px; color: var(--text-primary); font-size: 11px; outline: none; font-family: var(--font); }
 
-/* ── Kanban card accent ── */
-.focus-card  { border-left: 3px solid var(--green);  }
-.plan-card   { border-left: 3px solid rgba(255,255,255,0.12); }
-.card-sublabel { font-size: 11px; color: var(--text-tertiary); float: right; margin-top: -2px; font-variant-numeric: tabular-nums; }
-
-/* ── Appointments accent ── */
-.kpi-val-accent { color: var(--green); }
-
-/* ── Sequence health table ── */
-.seq-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.seq-table th {
-  text-align: left; font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--text-tertiary); padding-bottom: 8px;
-}
-.seq-table th:not(:first-child) { text-align: center; }
-.seq-table td { padding: 6px 0; color: var(--text-secondary); }
-.seq-table td:not(:first-child) { text-align: center; }
-.seq-table tr + tr td { border-top: 1px solid rgba(255,255,255,0.04); }
-.seq-input {
-  width: 60px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 6px; padding: 4px 8px; color: var(--text-primary); font-family: var(--font-mono);
-  font-size: 12px; text-align: center; outline: none; transition: border-color 0.2s;
-}
-.seq-input:focus { border-color: rgba(255,255,255,0.22); }
-.seq-input::placeholder { color: var(--text-tertiary); }
-
-/* ── Error banner ── */
-.err-banner {
-  display: none; background: rgba(248,113,113,0.10);
-  border: 1px solid rgba(248,113,113,0.25);
-  border-radius: 12px; padding: 12px 16px; margin-bottom: 14px;
-  font-size: 12px; color: var(--red);
-}
+/* Error banner */
+.err-banner { display: none; background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.25); border-radius: 8px; padding: 7px 12px; font-size: 11px; color: var(--red); margin-bottom: 8px; }
 .err-banner.show { display: block; }
-.err-title { font-weight: 700; margin-bottom: 4px; }
 
-/* ── Settings modal (keep from original) ── */
-.modal-bg {
-  position: fixed; inset: 0; z-index: 120; display: none;
-  align-items: center; justify-content: center; padding: 20px;
-  background: rgba(0,0,0,0.6); backdrop-filter: blur(10px);
+/* Keyframes */
+@keyframes spin   { to { transform: rotate( 360deg); } }
+@keyframes spin-r { to { transform: rotate(-360deg); } }
+@keyframes pglow  { 0%,100%{opacity:.65} 50%{opacity:1} }
+
+/* ── Settings Modal ──────────────────────────────────────────── */
+.settings-bg {
+  display: none; position: fixed; inset: 0; z-index: 100;
+  background: rgba(0,0,0,0.75); backdrop-filter: blur(8px);
+  align-items: center; justify-content: center;
 }
-.modal-bg.show { display: flex; }
-.modal {
-  width: 100%; max-width: 460px; max-height: 88vh; overflow-y: auto;
-  background: #0e0e10; border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 18px; padding: 22px; box-shadow: 0 24px 70px rgba(0,0,0,0.6);
+.settings-bg.show { display: flex; }
+.settings-modal {
+  background: #080D14; border: 1px solid var(--card-border); border-radius: 14px;
+  padding: 22px; width: 360px; max-height: 82vh; overflow-y: auto; position: relative;
 }
-.modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
-.modal-title { font-size: 18px; font-weight: 700; color: var(--text-primary); }
-.modal-close { border: 0; background: transparent; color: var(--text-tertiary); font-size: 26px; cursor: pointer; }
-.modal-close:hover { color: var(--text-primary); }
-.field { margin-bottom: 14px; }
-.field-label { font-size: 11px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 7px; display: block; }
-.field-row { display: flex; gap: 8px; align-items: center; }
-.set-input {
-  flex: 1; min-width: 0; padding: 11px 13px;
-  border: 1px solid rgba(255,255,255,0.08); border-radius: 11px;
-  background: rgba(0,0,0,0.3); color: var(--text-primary);
-  font-family: inherit; font-size: 14px; outline: none; transition: border-color 0.2s;
-}
-.set-input:focus { border-color: rgba(255,255,255,0.28); }
-.seg { display: inline-flex; border: 1px solid rgba(255,255,255,0.10); border-radius: 11px; overflow: hidden; flex-shrink: 0; }
-.seg button { border: 0; background: transparent; color: var(--text-tertiary); font-family: inherit; font-size: 13px; font-weight: 600; padding: 11px 14px; cursor: pointer; transition: background 0.15s, color 0.15s; }
-.seg button.on { background: rgba(255,255,255,0.12); color: var(--text-primary); }
-.set-save {
-  width: 100%; margin-top: 6px; padding: 13px; border: 0; border-radius: 12px;
-  background: linear-gradient(180deg,#FFFFFF,#E8E5DD); color: #0A0A0B;
-  font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 22px rgba(0,0,0,0.25);
-  transition: filter 0.15s;
-}
-.set-save:hover { filter: brightness(1.05); }
-.set-status { text-align: center; font-size: 12px; color: var(--green); min-height: 16px; margin-top: 8px; }
-.section-divider { height: 1px; background: rgba(255,255,255,0.07); margin: 20px 0 14px; }
-.whoop-box { margin-top: 8px; padding: 16px; border-radius: 14px; background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06); }
-.whoop-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.whoop-status { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--text-primary); }
-.whoop-status .dot { width: 8px; height: 8px; border-radius: 50%; background: #76746E; }
-.whoop-status.on .dot { background: var(--green); box-shadow: 0 0 8px rgba(107,227,164,0.7); }
-.whoop-sync { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); text-align: right; }
-.whoop-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-top: 14px; }
+.settings-modal::-webkit-scrollbar { width: 4px; }
+.settings-modal::-webkit-scrollbar-thumb { background: var(--card-border); border-radius: 2px; }
+.set-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.set-title { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.set-close { background: none; border: none; color: var(--text-tertiary); font-size: 20px; cursor: pointer; }
+.set-section { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-tertiary); margin: 16px 0 8px; }
+.set-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.set-lbl { font-size: 12px; color: var(--text-secondary); width: 90px; flex-shrink: 0; }
+.set-field { flex: 1; background: rgba(0,212,255,0.05); border: 1px solid var(--card-border); border-radius: 7px; padding: 7px 10px; color: var(--text-primary); font-size: 12px; outline: none; font-family: var(--font); }
+.set-field:focus { border-color: rgba(0,212,255,0.35); }
+.seg-wrap { display: flex; gap: 4px; }
+.seg-btn { flex: 1; background: rgba(0,212,255,0.04); border: 1px solid var(--card-border); border-radius: 6px; padding: 5px; font-size: 11px; color: var(--text-tertiary); cursor: pointer; transition: all 0.15s; }
+.seg-btn.on { background: rgba(0,212,255,0.15); border-color: rgba(0,212,255,0.3); color: var(--cyan); font-weight: 700; }
+.set-save { width: 100%; padding: 10px; background: rgba(0,212,255,0.12); border: 1px solid rgba(0,212,255,0.25); border-radius: 8px; color: var(--cyan); font-size: 13px; font-weight: 700; cursor: pointer; margin-top: 14px; }
+.set-status { font-size: 11px; color: var(--green); text-align: center; margin-top: 6px; min-height: 16px; }
+/* WHOOP section */
+.whoop-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.whoop-status { display: flex; align-items: center; gap: 6px; }
+.whoop-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-tertiary); }
+.whoop-dot.on { background: var(--green); box-shadow: 0 0 5px var(--green); }
+.whoop-stats { display: flex; gap: 14px; margin-bottom: 10px; }
 .whoop-stat { text-align: center; }
-.whoop-stat .v { font-size: 20px; font-weight: 700; color: var(--text-primary); line-height: 1; }
-.whoop-stat .l { font-size: 9.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-top: 5px; }
-.whoop-btn { width: 100%; margin-top: 14px; padding: 11px; border: 1px solid rgba(255,255,255,0.12); border-radius: 11px; background: transparent; color: var(--text-secondary); font-family: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: background 0.15s, color 0.15s; }
-.whoop-btn:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); }
+.whoop-stat .v { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+.whoop-stat .l { font-size: 9px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.08em; }
+.whoop-btn { background: rgba(0,212,255,0.08); border: 1px solid var(--card-border); border-radius: 7px; padding: 7px 14px; color: var(--cyan); font-size: 12px; cursor: pointer; }
 </style>
 </head>
 <body>
-<div class="page">
+<div class="shell">
 
-  <!-- Header -->
-  <div class="hub-head">
-    <h1 class="dash-title">Jarvis</h1>
-    <nav class="mini-nav">
-      <a href="sales.html">Sales</a>
-      <a href="gym.html">Gym</a>
-      <a href="health.html">Health</a>
-      <a href="nova-lite.html">Nova</a>
-      <a href="finance.html">Finance</a>
-    </nav>
-    <div class="head-right">
-      <span class="sync-badge" id="syncBadge">loading…</span>
-      <button class="gear-btn" id="settingsOpen" type="button" aria-label="Settings">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+  <!-- ── HEADER ─────────────────────────────────────────────── -->
+  <header class="j-head">
+    <div class="head-logo">
+      <div class="logo-ring-wrap">
+        <svg viewBox="0 0 26 26" fill="none">
+          <circle cx="13" cy="13" r="11.5" stroke="rgba(0,212,255,0.2)" stroke-width="1"/>
+          <path d="M13 1.5 A11.5 11.5 0 0 1 24.5 13" stroke="#00D4FF" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="13" cy="13" r="3" fill="rgba(0,212,255,0.4)"/>
+          <circle cx="13" cy="13" r="1.5" fill="#00D4FF"/>
         </svg>
-      </button>
-    </div>
-  </div>
-
-  <!-- Error banner -->
-  <div class="err-banner" id="errBanner">
-    <div class="err-title" id="errTitle">HubSpot sync failed</div>
-    <div id="errDetail"></div>
-  </div>
-
-  <!-- Sprint Goals -->
-  <div class="sprint-row">
-    <div class="sprint-card">
-      <div class="sprint-name">Michelle · 60 dials/day</div>
-      <div class="sprint-status off-track" id="sprintDialsStatus"><span class="dot"></span><span id="sprintDialsLabel">—</span></div>
-      <div class="sprint-detail" id="sprintDialsDetail">loading…</div>
-      <div class="sprint-deadline">Deadline Jun 30 · <span id="dlDials">—</span> days</div>
-    </div>
-    <div class="sprint-card">
-      <div class="sprint-name">Team · 10 meetings/wk</div>
-      <div class="sprint-status off-track" id="sprintMtgStatus"><span class="dot"></span><span id="sprintMtgLabel">—</span></div>
-      <div class="sprint-detail" id="sprintMtgDetail">loading…</div>
-      <div class="sprint-deadline">Deadline Jul 2 · <span id="dlMtg">—</span> days</div>
-    </div>
-  </div>
-
-  <!-- Main 2-col grid -->
-  <div class="cmd-grid">
-
-    <!-- LEFT: Metrics -->
-    <div>
-
-      <!-- Monthly Sales -->
-      <div class="card">
-        <div class="section-head">
-          <span class="card-label" id="monthLabel">Monthly</span>
-          <div class="section-badges">
-            <span class="badge">Goal <span>10/wk</span></span>
-          </div>
-        </div>
-
-        <div class="kpi-row">
-          <div class="kpi">
-            <div class="kpi-val kpi-val-accent" id="kpiAppts">—</div>
-            <div class="kpi-sub">Appointments</div>
-            <div class="kpi-detail"><span id="kpiApptA">—</span> Anish · <span id="kpiApptM">—</span> Michelle</div>
-          </div>
-          <div class="kpi-divider"></div>
-          <div class="kpi">
-            <div class="kpi-val" id="kpiMqls">—</div>
-            <div class="kpi-sub">MQLs</div>
-            <div class="kpi-detail">Pre-assess · overview</div>
-          </div>
-          <div class="kpi-divider"></div>
-          <div class="kpi">
-            <div class="kpi-val" id="kpiSqls">—</div>
-            <div class="kpi-sub">SQLs</div>
-            <div class="kpi-detail">Discovery+</div>
-          </div>
-        </div>
-
-        <div class="funnel-title">Monthly Call Funnel</div>
-        <div class="funnel-cols">
-          <div>
-            <div class="funnel-side-label">Anish</div>
-            <div id="mFunnelAnish"></div>
-          </div>
-          <div>
-            <div class="funnel-side-label">Michelle</div>
-            <div id="mFunnelMichelle"></div>
-          </div>
-        </div>
       </div>
+      <span class="logo-text">JARVIS</span>
+    </div>
+    <div class="head-center">
+      <div class="head-greeting" id="headGreeting"><strong>Good morning, Anish.</strong></div>
+    </div>
+    <div class="head-right">
+      <div class="sys-online"><div class="sys-dot"></div> SYSTEM ONLINE</div>
+      <div class="head-time" id="headTime">—</div>
+      <div class="sync-badge" id="syncBadge">loading…</div>
+      <button class="gear-btn" id="settingsOpen" title="Settings">⚙</button>
+    </div>
+  </header>
 
-      <!-- Weekly Activity -->
-      <div class="card">
-        <div class="section-head">
-          <span class="card-label" id="weekLabel">Week</span>
-          <div class="section-badges">
-            <span class="badge" id="wkAvgBadge">avg <span id="wkAvg">—</span>/day</span>
-            <span class="badge" id="wkConnBadge"><span id="wkConn">—</span> connects</span>
-          </div>
-        </div>
+  <!-- ── SIDEBAR ────────────────────────────────────────────── -->
+  <nav class="j-sidebar">
+    <a class="nav-link active" href="index.html"><span class="nav-icon">⌂</span> Home</a>
+    <a class="nav-link" href="sales.html"><span class="nav-icon">📞</span> Sales</a>
+    <a class="nav-link" href="gym.html"><span class="nav-icon">💪</span> Gym</a>
+    <a class="nav-link" href="health.html"><span class="nav-icon">❤</span> Health</a>
+    <a class="nav-link" href="finance.html"><span class="nav-icon">💰</span> Finance</a>
+    <a class="nav-link" href="nova.html"><span class="nav-icon">🧠</span> Nova</a>
+    <div class="nav-sep"></div>
+    <hr class="nav-hr">
+    <a class="nav-link" href="#" id="settingsOpen2"><span class="nav-icon">⚙</span> Settings</a>
+  </nav>
 
-        <div class="chart-legend">
-          <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Anish</div>
-          <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div>Michelle</div>
-        </div>
-        <div class="bar-chart" id="barChart"></div>
+  <!-- ── CENTER: JARVIS AI ──────────────────────────────────── -->
+  <main class="j-center">
 
-        <div class="funnel-title">Weekly Call Funnel</div>
-        <div class="funnel-cols">
-          <div>
-            <div class="funnel-side-label">Anish</div>
-            <div id="wFunnelAnish"></div>
-          </div>
-          <div>
-            <div class="funnel-side-label">Michelle</div>
-            <div id="wFunnelMichelle"></div>
-          </div>
-        </div>
-      </div>
+    <div id="errBanner" class="err-banner"><strong id="errTitle">Error</strong> — <span id="errDetail"></span></div>
 
-      <!-- Rolling Trend -->
-      <div class="card">
-        <span class="card-label">4-Week Rolling Trend</span>
-        <div class="trend-section">
-          <div class="trend-label">Meetings booked / wk</div>
-          <div class="trend-bars" id="trendMtg"></div>
-        </div>
-        <div class="trend-section" style="margin-bottom:0">
-          <div class="trend-label">Total dials / wk</div>
-          <div class="trend-bars" id="trendDials"></div>
-        </div>
-      </div>
-
+    <!-- Circular animation -->
+    <div class="j-arc-wrap" id="arcWrap">
+      <div class="arc arc-1"></div>
+      <div class="arc arc-2"></div>
+      <div class="arc arc-3"></div>
+      <div class="arc arc-4"></div>
+      <div class="arc arc-glow"></div>
+      <div class="arc arc-core"><span class="arc-letter">J</span></div>
     </div>
 
-    <!-- RIGHT: Planning -->
-    <div>
-
-      <!-- Today's Focus -->
-      <div class="card focus-card">
-        <span class="card-label">Today's Focus <span class="card-sublabel" id="todayCount"></span></span>
-        <ul class="task-list" id="todayList"></ul>
-        <div class="add-task-row">
-          <input class="task-input" id="todayInput" placeholder="Add commitment…" />
-          <button class="add-btn" id="todayAdd">+</button>
-        </div>
+    <!-- Voice status row -->
+    <div class="j-voice-info">
+      <div class="voice-status-row">
+        <div class="vdot" id="vDot"></div>
+        <span id="vLabel">MUTED</span>
       </div>
-
-      <!-- Tomorrow -->
-      <div class="card plan-card">
-        <span class="card-label">Tomorrow <span class="card-sublabel" id="tomorrowCount"></span></span>
-        <ul class="task-list" id="tomorrowList"></ul>
-        <div class="add-task-row">
-          <input class="task-input" id="tomorrowInput" placeholder="Plan ahead…" />
-          <button class="add-btn" id="tomorrowAdd">+</button>
-        </div>
+      <div class="j-wave" id="jWave">
+        <div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div>
+        <div class="wb"></div><div class="wb"></div><div class="wb"></div><div class="wb"></div>
       </div>
-
-      <!-- Deadlines (prominent) -->
-      <div class="card deadline-card">
-        <span class="card-label">Deadlines</span>
-        <div class="deadline-row">
-          <span class="deadline-lbl">Machine · Michelle 60 dials/day<br><span style="font-size:10px;color:var(--text-tertiary)">Jun 30, 2026</span></span>
-          <div class="deadline-badge">
-            <div class="deadline-num" id="dlDialsFull">—</div>
-            <div class="deadline-sub">days left</div>
-          </div>
-        </div>
-        <div class="deadline-row">
-          <span class="deadline-lbl">Outcome · 10 meetings/wk<br><span style="font-size:10px;color:var(--text-tertiary)">Jul 2, 2026</span></span>
-          <div class="deadline-badge">
-            <div class="deadline-num" id="dlMtgFull">—</div>
-            <div class="deadline-sub">days left</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Sequence & List Health -->
-      <div class="card">
-        <span class="card-label">Sequence &amp; List Health <span class="card-sublabel" id="seqSyncTime"></span></span>
-        <table class="seq-table">
-          <thead>
-            <tr><th></th><th>Anish</th><th>Michelle</th></tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Enrolled in sequences</td>
-              <td style="text-align:center;font-weight:700;color:var(--text-primary)" id="seqAE">—</td>
-              <td style="text-align:center;font-weight:700;color:var(--text-primary)" id="seqME">—</td>
-            </tr>
-            <tr>
-              <td>P1 contacts available <span style="font-size:9px;color:var(--text-tertiary)">(manual)</span></td>
-              <td><input class="seq-input" id="seqAP" placeholder="—" /></td>
-              <td><input class="seq-input" id="seqMP" placeholder="—" /></td>
-            </tr>
-            <tr>
-              <td>Added this week</td>
-              <td style="text-align:center;font-weight:700;color:var(--text-primary)" id="seqAW">—</td>
-              <td style="text-align:center;font-weight:700;color:var(--text-primary)" id="seqMW">—</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
     </div>
-  </div>
+
+    <!-- Chat history -->
+    <div class="j-chat" id="jChat">
+      <div class="chat-empty" id="chatEmpty">Ask me anything — voice or text below.</div>
+    </div>
+
+    <!-- Live transcript -->
+    <div class="j-transcript" id="jTranscript"></div>
+
+    <!-- Input row -->
+    <div class="j-input-row">
+      <input class="j-input" id="jTextInput" placeholder="Ask JARVIS anything…" autocomplete="off">
+      <button class="j-send" id="jSendBtn" title="Send">➤</button>
+      <button class="j-mic" id="jMicBtn" title="Toggle voice">🎤</button>
+    </div>
+    <div class="voice-note" id="voiceNote">Voice requires HTTPS / Chrome — use text input as fallback</div>
+
+  </main>
+
+  <!-- ── RIGHT PANEL ────────────────────────────────────────── -->
+  <aside class="j-right">
+
+    <!-- Sprint status -->
+    <div class="jc">
+      <div class="jc-title">Command Status <span class="jc-sub" id="syncTimeRight"></span></div>
+      <div class="sprint-row" id="sprintDialsRow">
+        <div>
+          <div class="sprint-name">Michelle · 60 dials/day</div>
+          <div class="sprint-detail" id="sprintDialsDetail">—</div>
+        </div>
+        <div class="sprint-status" id="sprintDialsStatus">
+          <span class="sprint-badge" id="sprintDialsLabel">—</span>
+        </div>
+      </div>
+      <div class="sprint-row" id="sprintMtgRow">
+        <div>
+          <div class="sprint-name">10 meetings / week</div>
+          <div class="sprint-detail" id="sprintMtgDetail">—</div>
+        </div>
+        <div class="sprint-status" id="sprintMtgStatus">
+          <span class="sprint-badge" id="sprintMtgLabel">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Week metrics -->
+    <div class="jc">
+      <div class="jc-title">This Week</div>
+      <div class="wm-row">
+        <div class="wm-lbl">Meetings</div>
+        <div class="wm-right">
+          <div class="wm-val cyan" id="wkMeetings">—</div>
+          <div class="wm-note">of 10 goal</div>
+        </div>
+      </div>
+      <div class="prog-wrap">
+        <div class="prog-track"><div class="prog-fill" id="mtgProgBar" style="width:0%"></div></div>
+      </div>
+      <div class="wm-row" style="margin-top:8px">
+        <div class="wm-lbl">Avg dials/day</div>
+        <div class="wm-right">
+          <div class="wm-val" id="wkAvg">—</div>
+          <div class="wm-note">A + M combined</div>
+        </div>
+      </div>
+      <div class="wm-row">
+        <div class="wm-lbl">Connects</div>
+        <div class="wm-right">
+          <div class="wm-val" id="wkConn">—</div>
+        </div>
+      </div>
+      <div class="wm-row">
+        <div class="wm-lbl">Appts this month</div>
+        <div class="wm-right">
+          <div class="wm-val green" id="kpiAppts">—</div>
+          <div class="wm-note"><span id="kpiApptA">—</span> A · <span id="kpiApptM">—</span> M</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Today's Focus -->
+    <div class="jc" style="border-left: 2px solid var(--cyan);">
+      <div class="jc-title">Today's Focus <span class="jc-sub" id="todayCount"></span></div>
+      <ul class="task-list" id="todayList"></ul>
+      <div class="add-row">
+        <input class="t-input" id="todayInput" placeholder="Add commitment…">
+        <button class="add-btn" id="todayAdd">+</button>
+      </div>
+    </div>
+
+    <!-- Tomorrow -->
+    <div class="jc">
+      <div class="jc-title">Tomorrow <span class="jc-sub" id="tomorrowCount"></span></div>
+      <ul class="task-list" id="tomorrowList"></ul>
+      <div class="add-row">
+        <input class="t-input" id="tomorrowInput" placeholder="Plan ahead…">
+        <button class="add-btn" id="tomorrowAdd">+</button>
+      </div>
+    </div>
+
+    <!-- Deadlines -->
+    <div class="jc dl-jcard">
+      <div class="jc-title">Deadlines</div>
+      <div class="dl-row">
+        <div>
+          <div class="dl-name">Michelle · 60 dials/day</div>
+          <div class="dl-date">Jun 30, 2026</div>
+        </div>
+        <div class="dl-badge">
+          <div class="dl-num" id="dlDialsFull">—</div>
+          <div class="dl-unit">days left</div>
+        </div>
+      </div>
+      <div class="dl-row">
+        <div>
+          <div class="dl-name">10 meetings/week</div>
+          <div class="dl-date">Jul 2, 2026</div>
+        </div>
+        <div class="dl-badge">
+          <div class="dl-num" id="dlMtgFull">—</div>
+          <div class="dl-unit">days left</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sequence Health -->
+    <div class="jc">
+      <div class="jc-title">Sequence Health <span class="jc-sub" id="seqSyncTime"></span></div>
+      <table class="seq-tbl">
+        <thead>
+          <tr><th></th><th>Anish</th><th>Michelle</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Enrolled</td>
+            <td class="av" id="seqAE">—</td>
+            <td class="av" id="seqME">—</td>
+          </tr>
+          <tr>
+            <td>P1 available <span style="font-size:9px;color:var(--text-tertiary)">(manual)</span></td>
+            <td><input class="s-inp" id="seqAP" placeholder="—"></td>
+            <td><input class="s-inp" id="seqMP" placeholder="—"></td>
+          </tr>
+          <tr>
+            <td>Added this week</td>
+            <td class="av" id="seqAW">—</td>
+            <td class="av" id="seqMW">—</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </aside>
+</div><!-- /shell -->
+
+<!-- Hidden elements required by JS (not displayed) -->
+<div style="display:none">
+  <div id="monthLabel"></div><div id="weekLabel"></div>
+  <div id="kpiMqls"></div><div id="kpiSqls"></div>
+  <div id="mFunnelAnish"></div><div id="mFunnelMichelle"></div>
+  <div id="wFunnelAnish"></div><div id="wFunnelMichelle"></div>
+  <div id="barChart"></div>
+  <div id="trendMtg"></div><div id="trendDials"></div>
+  <div id="dlDials"></div><div id="dlMtg"></div>
 </div>
 
-<!-- Settings modal -->
-<div class="modal-bg" id="settingsBg">
-  <div class="modal" role="dialog" aria-label="Settings">
-    <div class="modal-head">
-      <span class="modal-title">Your Data</span>
-      <button class="modal-close" id="settingsClose" type="button">×</button>
+<!-- Settings Modal -->
+<div class="settings-bg" id="settingsBg">
+  <div class="settings-modal">
+    <div class="set-head">
+      <span class="set-title">Settings</span>
+      <button class="set-close" id="settingsClose">×</button>
     </div>
-    <div class="field">
-      <label class="field-label">Height</label>
-      <div class="field-row">
-        <input class="set-input" id="heightA" type="number" min="0" inputmode="decimal" placeholder="cm">
-        <input class="set-input" id="heightB" type="number" min="0" inputmode="decimal" placeholder="in" style="display:none">
-        <div class="seg" id="heightUnitSeg">
-          <button type="button" data-u="cm" class="on">cm</button>
-          <button type="button" data-u="ft">ft/in</button>
+
+    <div class="set-section">Profile</div>
+    <div class="set-row">
+      <span class="set-lbl">Height</span>
+      <div style="display:flex;gap:6px;flex:1">
+        <input class="set-field" id="heightA" placeholder="cm" style="width:60px;flex:none">
+        <input class="set-field" id="heightB" placeholder="in" style="width:50px;flex:none;display:none">
+        <div class="seg-wrap" id="heightUnitSeg">
+          <button class="seg-btn" data-u="cm">cm</button>
+          <button class="seg-btn" data-u="ft">ft</button>
         </div>
       </div>
     </div>
-    <div class="field">
-      <label class="field-label">Weight</label>
-      <div class="field-row">
-        <input class="set-input" id="weight" type="number" min="0" inputmode="decimal" placeholder="weight">
-        <div class="seg" id="weightUnitSeg">
-          <button type="button" data-u="kg" class="on">kg</button>
-          <button type="button" data-u="lb">lb</button>
+    <div class="set-row">
+      <span class="set-lbl">Weight</span>
+      <div style="display:flex;gap:6px;flex:1">
+        <input class="set-field" id="weight" placeholder="70" style="width:60px;flex:none">
+        <div class="seg-wrap" id="weightUnitSeg">
+          <button class="seg-btn" data-u="kg">kg</button>
+          <button class="seg-btn" data-u="lb">lb</button>
         </div>
       </div>
     </div>
-    <div class="field">
-      <label class="field-label">Age</label>
-      <input class="set-input" id="age" type="number" min="0" inputmode="numeric" placeholder="years">
+    <div class="set-row">
+      <span class="set-lbl">Age</span>
+      <input class="set-field" id="age" placeholder="25" type="number">
     </div>
-    <div class="field">
-      <label class="field-label">Sex</label>
-      <div class="seg" id="sexSeg" style="width:100%;display:flex">
-        <button type="button" data-s="m" style="flex:1">Male</button>
-        <button type="button" data-s="f" style="flex:1">Female</button>
+    <div class="set-row">
+      <span class="set-lbl">Sex</span>
+      <div class="seg-wrap" id="sexSeg" style="flex:1">
+        <button class="seg-btn" data-s="m">Male</button>
+        <button class="seg-btn" data-s="f">Female</button>
       </div>
     </div>
-    <div class="field">
-      <label class="field-label">Active hours / week</label>
-      <input class="set-input" id="activity" type="number" min="0" inputmode="decimal" placeholder="e.g. 5">
+    <div class="set-row">
+      <span class="set-lbl">Activity hrs/wk</span>
+      <input class="set-field" id="activity" placeholder="5" type="number">
     </div>
-    <button class="set-save" id="settingsSave" type="button">Save</button>
+
+    <div class="set-section">WHOOP</div>
+    <div class="whoop-row">
+      <div class="whoop-status">
+        <div class="whoop-dot" id="whStatus"></div>
+        <span style="font-size:12px;color:var(--text-secondary)" id="whStatusText">Not connected</span>
+      </div>
+      <span style="font-size:11px;color:var(--text-tertiary)" id="whSync"></span>
+    </div>
+    <div class="whoop-stats" id="whStats" style="display:none">
+      <div class="whoop-stat"><div class="v" id="whRec">—</div><div class="l">Recovery</div></div>
+      <div class="whoop-stat"><div class="v" id="whSleep">—</div><div class="l">Sleep</div></div>
+      <div class="whoop-stat"><div class="v" id="whRhr">—</div><div class="l">Rest HR</div></div>
+    </div>
+    <button class="whoop-btn" id="whAction" type="button">Sync now</button>
+
+    <button class="set-save" id="settingsSave">Save Settings</button>
     <div class="set-status" id="settingsStatus"></div>
-    <div class="section-divider"></div>
-    <label class="field-label">WHOOP</label>
-    <div class="whoop-box">
-      <div class="whoop-row">
-        <span class="whoop-status" id="whStatus"><span class="dot"></span><span id="whStatusText">Not connected</span></span>
-        <span class="whoop-sync" id="whSync"></span>
-      </div>
-      <div class="whoop-stats" id="whStats" style="display:none">
-        <div class="whoop-stat"><div class="v" id="whRec">—</div><div class="l">Recovery</div></div>
-        <div class="whoop-stat"><div class="v" id="whSleep">—</div><div class="l">Sleep</div></div>
-        <div class="whoop-stat"><div class="v" id="whRhr">—</div><div class="l">Rest HR</div></div>
-      </div>
-      <button class="whoop-btn" id="whAction" type="button">Sync now</button>
-    </div>
   </div>
 </div>
 
@@ -628,474 +631,375 @@ body::after {
 (function () {
 'use strict';
 
-// ── Helpers ──────────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
-const setText = (id, v) => { const el = $(id); if (el) el.textContent = String(v ?? '—'); };
-const loadJSON = (k, f) => { try { return JSON.parse(localStorage.getItem(k)) || f; } catch { return f; } };
-const saveJSON = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+const setText = (id, v) => { const el=$(id); if(el) el.textContent = String(v ?? '—'); };
+const loadJSON = (k,f) => { try { return JSON.parse(localStorage.getItem(k)) || f; } catch { return f; } };
+const saveJSON = (k,v) => localStorage.setItem(k, JSON.stringify(v));
 
-function daysUntil(isoDate) {
-  const target = new Date(isoDate + 'T00:00:00');
-  const diff = Math.ceil((target - new Date()) / 86400000);
+// ── Live clock + greeting ────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  const h = now.getHours();
+  const greet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  const el = $('headGreeting');
+  if (el) el.innerHTML = `<strong>${greet}, Anish.</strong>`;
+  setText('headTime', now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }));
+}
+updateClock();
+setInterval(updateClock, 10000);
+
+// ── Date helpers ─────────────────────────────────────────────
+function daysUntil(iso) {
+  const diff = Math.ceil((new Date(iso+'T00:00:00') - new Date()) / 86400000);
   return diff > 0 ? diff : 0;
-}
-function monthName() {
-  return new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-}
-function weekRange() {
-  const n = new Date(), dow = n.getDay();
-  const mon = new Date(n); mon.setDate(n.getDate() - (dow === 0 ? 6 : dow - 1));
-  const fri = new Date(mon); fri.setDate(mon.getDate() + 4);
-  const fmt = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  return fmt(mon) + ' – ' + fmt(fri);
 }
 function isoWeekStart() {
   const n = new Date(), dow = n.getDay();
-  const mon = new Date(n); mon.setDate(n.getDate() - (dow === 0 ? 6 : dow - 1));
-  return mon.toISOString().slice(0, 10);
+  const mon = new Date(n); mon.setDate(n.getDate() - (dow===0?6:dow-1));
+  return mon.toISOString().slice(0,10);
+}
+function monthName()  { return new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'}); }
+function weekRange()  {
+  const n=new Date(),dow=n.getDay(),mon=new Date(n);
+  mon.setDate(n.getDate()-(dow===0?6:dow-1));
+  const fri=new Date(mon); fri.setDate(mon.getDate()+4);
+  const f=d=>d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  return f(mon)+' – '+f(fri);
 }
 
-// ── Deadlines ─────────────────────────────────────────────────────
+// ── Deadlines ─────────────────────────────────────────────────
 const DL_DIALS = '2026-06-30';
 const DL_MTG   = '2026-07-02';
-const MICHELLE_CALL_FLOOR = '2026-06-10';
 
-function dlColor(days) {
-  return days <= 7 ? 'urgent' : days <= 14 ? '' : 'safe';
-}
+function dlClass(days) { return days<=7?'urgent':days<=14?'warn':'safe'; }
 function renderDeadlines() {
-  const dd = daysUntil(DL_DIALS), dm = daysUntil(DL_MTG);
-  setText('dlDials',    dd + ' d');
-  setText('dlMtg',      dm + ' d');
-  const ddf = $('dlDialsFull'); if (ddf) { ddf.textContent = dd; ddf.className = 'deadline-num ' + dlColor(dd); }
-  const dmf = $('dlMtgFull');   if (dmf) { dmf.textContent = dm; dmf.className = 'deadline-num ' + dlColor(dm); }
+  const dd=daysUntil(DL_DIALS), dm=daysUntil(DL_MTG);
+  setText('dlDials', dd+'d'); setText('dlMtg', dm+'d');
+  const ddf=$('dlDialsFull'); if(ddf){ddf.textContent=dd; ddf.className='dl-num '+dlClass(dd);}
+  const dmf=$('dlMtgFull');   if(dmf){dmf.textContent=dm; dmf.className='dl-num '+dlClass(dm);}
 }
 renderDeadlines();
 
-// ── Sprint status ─────────────────────────────────────────────────
-function setSprintStatus(elId, labelId, detailId, cls, label, detail) {
-  const el = $(elId);
-  el.className = 'sprint-status ' + cls;
-  setText(labelId, label);
-  setText(detailId, detail);
+// ── Sprint status ─────────────────────────────────────────────
+const MICHELLE_CALL_FLOOR = '2026-06-10';
+
+function setSprintClass(rowId, statusId, labelId, cls, label, detail) {
+  const row = $(rowId); if(row) row.className = 'sprint-row '+cls;
+  const badge = $(labelId); if(badge) badge.textContent = label;
+  setText(statusId, ''); // status div is just a wrapper for badge
+  setText(detailId_for(statusId), detail);
+}
+function detailId_for(sid) {
+  return sid === 'sprintDialsStatus' ? 'sprintDialsDetail' : 'sprintMtgDetail';
 }
 
 function updateSprints(data) {
   if (!data) return;
-
-  // Michelle dials sprint: 60/day by Jun 30
+  // Michelle dials sprint
   const mDials = data.monthly.michelle.dials;
-  const floorDate = new Date(MICHELLE_CALL_FLOOR + 'T00:00:00');
+  const floorDate = new Date(MICHELLE_CALL_FLOOR+'T00:00:00');
   const today = new Date(); today.setHours(0,0,0,0);
-  const daysActive = Math.max(1, Math.round((today - floorDate) / 86400000));
+  const daysActive = Math.max(1, Math.round((today-floorDate)/86400000));
   const avg = mDials / daysActive;
-  let dialsCls, dialsLabel, dialsDetail;
-  if (avg >= 60)      { dialsCls = 'on-track';  dialsLabel = 'ON TRACK';  }
-  else if (avg >= 45) { dialsCls = 'at-risk';   dialsLabel = 'AT RISK';   }
-  else                { dialsCls = 'off-track';  dialsLabel = 'OFF TRACK'; }
-  dialsDetail = `Avg ${avg.toFixed(0)}/day (${mDials} total · ${daysActive} days)`;
-  setSprintStatus('sprintDialsStatus', 'sprintDialsLabel', 'sprintDialsDetail', dialsCls, dialsLabel, dialsDetail);
+  const dialsCls = avg>=60?'on-track':avg>=45?'at-risk':'off-track';
+  const dialsLabel = avg>=60?'ON TRACK':avg>=45?'AT RISK':'OFF TRACK';
+  const dRow=$('sprintDialsRow'); if(dRow) dRow.className='sprint-row '+dialsCls;
+  setText('sprintDialsLabel', dialsLabel);
+  setText('sprintDialsDetail', `Avg ${avg.toFixed(0)}/day · ${mDials} total`);
 
-  // Meetings sprint: 10/wk by Jul 2
+  // Meetings sprint
   const wm = data.weekly.weekMeetings;
   const dow = new Date().getDay();
-  // Days completed (current day in-progress excluded on Mon-Thu)
-  const daysElapsed = (dow === 0 || dow >= 5) ? 5 : Math.max(1, dow - 1);
-  const proj = Math.round((wm / daysElapsed) * 5);
-  let mtgCls, mtgLabel, mtgDetail;
-  if (wm >= 8 || proj >= 10)       { mtgCls = 'on-track';  mtgLabel = 'ON TRACK';  }
-  else if (wm >= 5 || proj >= 7)   { mtgCls = 'at-risk';   mtgLabel = 'AT RISK';   }
-  else                              { mtgCls = 'off-track';  mtgLabel = 'OFF TRACK'; }
-  mtgDetail = `${wm}/10 this week · proj. ${proj}/wk`;
-  setSprintStatus('sprintMtgStatus', 'sprintMtgLabel', 'sprintMtgDetail', mtgCls, mtgLabel, mtgDetail);
+  const daysElapsed = (dow===0||dow>=5)?5:Math.max(1,dow-1);
+  const proj = Math.round((wm/daysElapsed)*5);
+  const mtgCls = (wm>=8||proj>=10)?'on-track':(wm>=5||proj>=7)?'at-risk':'off-track';
+  const mtgLabel = (wm>=8||proj>=10)?'ON TRACK':(wm>=5||proj>=7)?'AT RISK':'OFF TRACK';
+  const mRow=$('sprintMtgRow'); if(mRow) mRow.className='sprint-row '+mtgCls;
+  setText('sprintMtgLabel', mtgLabel);
+  setText('sprintMtgDetail', `${wm}/10 this week · proj ${proj}/wk`);
+
+  // Week metrics
+  setText('wkMeetings', wm);
+  const pct = Math.min(100, Math.round(wm/10*100));
+  const bar=$('mtgProgBar'); if(bar){bar.style.width=pct+'%'; if(wm>=10)bar.classList.add('g');}
+  const totalAvg = +((data.weekly.anish.avgDials+data.weekly.michelle.avgDials)).toFixed(1);
+  setText('wkAvg', totalAvg);
+  setText('wkConn', data.weekly.anish.connects+data.weekly.michelle.connects);
+  setText('kpiAppts', data.monthly.appts);
+  setText('kpiApptA', data.monthly.apptAnish);
+  setText('kpiApptM', data.monthly.apptMichelle);
+  setText('kpiMqls', data.monthly.mqls);
+  setText('kpiSqls', data.monthly.sqls);
+
+  // header right sync note
+  const t=new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+  setText('syncTimeRight', t);
 }
 
-// ── Funnel renderer ───────────────────────────────────────────────
-function renderFunnel(containerId, f) {
-  const stages = [
-    { label: 'Connected',    val: f.connects,   color: 'var(--green)'  },
-    { label: 'Pitched',      val: f.pitched,    color: 'var(--amber)'  },
-    { label: 'Past Pitch',   val: f.pastPitch,  color: 'var(--orange)' },
-    { label: 'Meeting Set',  val: f.meetingSet, color: 'var(--red)'    },
-  ];
-  const baseline = f.connects || 1;
-  $(containerId).innerHTML = stages.map(s => `
-    <div class="funnel-row">
-      <span class="funnel-label">${s.label}</span>
-      <div class="funnel-bar-track">
-        <div class="funnel-bar-fill" style="width:${Math.min(100,Math.round(s.val/baseline*100))}%;background:${s.color}"></div>
-      </div>
-      <span class="funnel-num">${s.val}</span>
-    </div>`).join('');
+// ── Stubs for hidden elements (sales page renders these fully) ─
+function renderMonthly(d) { setText('monthLabel',monthName()); }
+function renderWeekly(d)  { setText('weekLabel',weekRange()); }
+function renderTrend(h)   {} // no-op on home page; sales.html has the chart
+function saveTrend(data)  {
+  const TREND_KEY='jarvis_trend_v1', ws=isoWeekStart();
+  const history=loadJSON(TREND_KEY,[]);
+  const idx=history.findIndex(e=>e.week===ws);
+  const entry={week:ws,label:new Date(ws+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}),meetings:data.weekly.weekMeetings,dials:data.weekly.anish.dials+data.weekly.michelle.dials};
+  if(idx>=0)history[idx]=entry; else history.push(entry);
+  saveJSON(TREND_KEY,history.sort((a,b)=>a.week.localeCompare(b.week)).slice(-8));
 }
 
-// ── Bar chart renderer ────────────────────────────────────────────
-function renderBarChart(byDay) {
-  const DAYS = ['Mon','Tue','Wed','Thu','Fri'];
-  const maxVal = Math.max(1, ...DAYS.flatMap(d => [byDay.Anish[d], byDay.Michelle[d]]));
-  const H = 72;
-  $('barChart').innerHTML = DAYS.map(day => {
-    const a = byDay.Anish[day], m = byDay.Michelle[day];
-    const aH = Math.max(2, Math.round(a / maxVal * H));
-    const mH = Math.max(2, Math.round(m / maxVal * H));
-    return `<div class="bar-day">
-      <div class="bar-group">
-        <div class="bar-col anish"    style="height:${aH}px" title="Anish ${a}"></div>
-        <div class="bar-col michelle" style="height:${mH}px" title="Michelle ${m}"></div>
-      </div>
-      <div class="bar-nums">${a}/${m}</div>
-      <div class="bar-lbl">${day}</div>
-    </div>`;
-  }).join('');
-}
-
-// ── Monthly render ────────────────────────────────────────────────
-function renderMonthly(d) {
-  setText('monthLabel', monthName());
-  setText('kpiAppts', d.appts);
-  setText('kpiApptA', d.apptAnish);
-  setText('kpiApptM', d.apptMichelle);
-  setText('kpiMqls',  d.mqls);
-  setText('kpiSqls',  d.sqls);
-  renderFunnel('mFunnelAnish',    d.anish);
-  renderFunnel('mFunnelMichelle', d.michelle);
-}
-
-// ── Weekly render ─────────────────────────────────────────────────
-function renderWeekly(d) {
-  setText('weekLabel', weekRange());
-  const totalAvg = +((d.anish.avgDials + d.michelle.avgDials)).toFixed(1);
-  const totalConn = d.anish.connects + d.michelle.connects;
-  setText('wkAvg',  totalAvg);
-  setText('wkConn', totalConn);
-  renderBarChart(d.byDay);
-  renderFunnel('wFunnelAnish',    d.anish);
-  renderFunnel('wFunnelMichelle', d.michelle);
-}
-
-// ── Rolling trend ─────────────────────────────────────────────────
-const TREND_KEY = 'jarvis_trend_v1';
-
-function saveTrend(data) {
-  const ws = isoWeekStart();
-  const history = loadJSON(TREND_KEY, []);
-  const idx = history.findIndex(e => e.week === ws);
-  const entry = {
-    week:     ws,
-    label:    new Date(ws + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    meetings: data.weekly.weekMeetings,
-    dials:    data.weekly.anish.dials + data.weekly.michelle.dials,
-  };
-  if (idx >= 0) history[idx] = entry;
-  else history.push(entry);
-  // keep only last 8 weeks
-  const trimmed = history.sort((a,b) => a.week.localeCompare(b.week)).slice(-8);
-  saveJSON(TREND_KEY, trimmed);
-  renderTrend(trimmed);
-}
-
-function renderTrend(history) {
-  const placeholder = '<div style="font-size:11px;color:var(--text-tertiary);padding:4px 0">Building — updates each sync (1 bar/week)</div>';
-  if (!history || !history.length) {
-    $('trendMtg').innerHTML   = placeholder;
-    $('trendDials').innerHTML = '';
-    return;
-  }
-  const last4 = history.slice(-4);
-  const ws    = isoWeekStart();
-  const MAX_H = 46; // px — fixed scale, no percentage
-
-  function chartHTML(key, goalLine) {
-    const maxVal = Math.max(goalLine || 1, ...last4.map(e => e[key]));
-    const bars = last4.map(e => {
-      const barH = Math.max(4, Math.round(e[key] / maxVal * MAX_H));
-      const isCurrent = e.week === ws;
-      return `<div class="trend-bar-wrap">
-        <div class="trend-val">${e[key]}</div>
-        <div class="trend-bar ${isCurrent ? 'current' : ''}" style="height:${barH}px"></div>
-        <div class="trend-week-lbl">${e.label}</div>
-      </div>`;
-    }).join('');
-    const note = last4.length < 4
-      ? `<div style="font-size:10px;color:var(--text-tertiary);margin-top:8px">${last4.length}/4 weeks — keeps growing</div>`
-      : '';
-    return `<div class="trend-chart">${bars}</div>${note}`;
-  }
-
-  $('trendMtg').innerHTML   = chartHTML('meetings', 10);
-  $('trendDials').innerHTML = chartHTML('dials',    200);
-}
-
-// init trend from localStorage
-renderTrend(loadJSON(TREND_KEY, []));
-
-// ── HubSpot sync ──────────────────────────────────────────────────
-let syncing = false, countdown = 300, hsData = null;
-const POLL_SEC = 300;
+// ── HubSpot sync ──────────────────────────────────────────────
+let syncing=false, countdown=300;
+const POLL_SEC=300;
 
 async function loadAll() {
-  if (syncing) return;
-  syncing = true;
-  setText('syncBadge', 'syncing…');
+  if(syncing) return;
+  syncing=true; setText('syncBadge','syncing…');
   $('errBanner').classList.remove('show');
-
   try {
-    const data = await fetch('/api/hubspot?type=all').then(async r => {
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
-      return j;
+    const data=await fetch('/api/hubspot?type=all').then(async r=>{
+      const j=await r.json(); if(!r.ok) throw new Error(j.error||`HTTP ${r.status}`); return j;
     });
-    hsData = data;
-    renderMonthly(data.monthly);
-    renderWeekly(data.weekly);
-    updateSprints(data);
-    saveTrend(data);
-    const t = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-    setText('syncBadge', 'Synced ' + t);
-    countdown = POLL_SEC;
-  } catch (e) {
+    renderMonthly(data.monthly); renderWeekly(data.weekly);
+    updateSprints(data); saveTrend(data);
+    const t=new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+    setText('syncBadge','Synced '+t); countdown=POLL_SEC;
+  } catch(e) {
     $('errBanner').classList.add('show');
-    setText('errTitle', 'HubSpot sync failed');
-    setText('errDetail', e.message || String(e));
-    const t = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-    setText('syncBadge', 'Failed ' + t);
+    setText('errTitle','HubSpot sync failed');
+    setText('errDetail',e.message||String(e));
+    const t=new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+    setText('syncBadge','Failed '+t);
   }
-  syncing = false;
+  syncing=false;
 }
-
-setInterval(() => {
-  countdown--;
-  if (countdown <= 0) { countdown = POLL_SEC; loadAll(); }
-}, 1000);
-
+setInterval(()=>{ countdown--; if(countdown<=0){countdown=POLL_SEC;loadAll();} },1000);
 loadAll();
 
-// ── Kanban ────────────────────────────────────────────────────────
-const TODAY_KEY    = 'jarvis_today_v1';
-const TOMORROW_KEY = 'jarvis_tomorrow_v1';
+// ── Kanban ────────────────────────────────────────────────────
+const TODAY_KEY='jarvis_today_v1', TOMORROW_KEY='jarvis_tomorrow_v1';
 
-function renderTasks(listId, key) {
-  const tasks = loadJSON(key, []);
-  const ul = $(listId);
-  ul.innerHTML = '';
-  tasks.forEach((t, i) => {
-    const li = document.createElement('li');
-    li.className = 'task-item';
-    li.innerHTML = `
-      <div class="task-check ${t.done ? 'done' : ''}" data-i="${i}" data-key="${key}"></div>
-      <span class="task-text ${t.done ? 'done' : ''}">${t.text}</span>
+function renderTasks(listId,key) {
+  const tasks=loadJSON(key,[]), ul=$(listId); ul.innerHTML='';
+  tasks.forEach((t,i)=>{
+    const li=document.createElement('li'); li.className='task-item';
+    li.innerHTML=`<div class="task-check ${t.done?'done':''}" data-i="${i}" data-key="${key}"></div>
+      <span class="task-text ${t.done?'done':''}">${t.text}</span>
       <button class="task-del" data-i="${i}" data-key="${key}" title="Remove">×</button>`;
     ul.appendChild(li);
   });
-  // update counter badge
-  const remaining = tasks.filter(t => !t.done).length;
-  const countId = key === TODAY_KEY ? 'todayCount' : 'tomorrowCount';
-  setText(countId, tasks.length ? `${remaining} left` : '');
+  const rem=tasks.filter(t=>!t.done).length;
+  setText(key===TODAY_KEY?'todayCount':'tomorrowCount', tasks.length?`${rem} left`:'');
 }
-
-function addTask(inputId, key, listId) {
-  const inp = $(inputId);
-  const text = inp.value.trim();
-  if (!text) return;
-  const tasks = loadJSON(key, []);
-  tasks.push({ text, done: false });
-  saveJSON(key, tasks);
-  inp.value = '';
-  renderTasks(listId, key);
+function addTask(inputId,key,listId) {
+  const inp=$(inputId), text=inp.value.trim(); if(!text) return;
+  const tasks=loadJSON(key,[]); tasks.push({text,done:false});
+  saveJSON(key,tasks); inp.value=''; renderTasks(listId,key);
 }
-
-document.addEventListener('click', e => {
-  // Toggle done
-  if (e.target.classList.contains('task-check')) {
-    const i = +e.target.dataset.i, key = e.target.dataset.key;
-    const tasks = loadJSON(key, []);
-    tasks[i].done = !tasks[i].done;
-    saveJSON(key, tasks);
-    const listId = key === TODAY_KEY ? 'todayList' : 'tomorrowList';
-    renderTasks(listId, key);
+document.addEventListener('click',e=>{
+  if(e.target.classList.contains('task-check')) {
+    const i=+e.target.dataset.i,key=e.target.dataset.key;
+    const tasks=loadJSON(key,[]); tasks[i].done=!tasks[i].done; saveJSON(key,tasks);
+    renderTasks(key===TODAY_KEY?'todayList':'tomorrowList',key);
   }
-  // Delete
-  if (e.target.classList.contains('task-del')) {
-    const i = +e.target.dataset.i, key = e.target.dataset.key;
-    const tasks = loadJSON(key, []);
-    tasks.splice(i, 1);
-    saveJSON(key, tasks);
-    const listId = key === TODAY_KEY ? 'todayList' : 'tomorrowList';
-    renderTasks(listId, key);
+  if(e.target.classList.contains('task-del')) {
+    const i=+e.target.dataset.i,key=e.target.dataset.key;
+    const tasks=loadJSON(key,[]); tasks.splice(i,1); saveJSON(key,tasks);
+    renderTasks(key===TODAY_KEY?'todayList':'tomorrowList',key);
   }
 });
+$('todayAdd').addEventListener('click',()=>addTask('todayInput',TODAY_KEY,'todayList'));
+$('tomorrowAdd').addEventListener('click',()=>addTask('tomorrowInput',TOMORROW_KEY,'tomorrowList'));
+$('todayInput').addEventListener('keydown',e=>{if(e.key==='Enter')addTask('todayInput',TODAY_KEY,'todayList');});
+$('tomorrowInput').addEventListener('keydown',e=>{if(e.key==='Enter')addTask('tomorrowInput',TOMORROW_KEY,'tomorrowList');});
+renderTasks('todayList',TODAY_KEY); renderTasks('tomorrowList',TOMORROW_KEY);
 
-$('todayAdd').addEventListener('click', () => addTask('todayInput', TODAY_KEY, 'todayList'));
-$('tomorrowAdd').addEventListener('click', () => addTask('tomorrowInput', TOMORROW_KEY, 'tomorrowList'));
-$('todayInput').addEventListener('keydown', e => { if (e.key === 'Enter') addTask('todayInput', TODAY_KEY, 'todayList'); });
-$('tomorrowInput').addEventListener('keydown', e => { if (e.key === 'Enter') addTask('tomorrowInput', TOMORROW_KEY, 'tomorrowList'); });
-
-renderTasks('todayList', TODAY_KEY);
-renderTasks('tomorrowList', TOMORROW_KEY);
-
-// ── Sequence health: P1 manual persistence + auto-fetch enrolled/added ──
-const SEQ_KEY    = 'jarvis_seq_v1';
-const P1_FIELDS  = ['seqAP','seqMP'];
-
-function loadSeqManual() {
-  const d = loadJSON(SEQ_KEY, {});
-  P1_FIELDS.forEach(id => { if ($(id) && d[id] != null) $(id).value = d[id]; });
-}
-function saveSeqManual() {
-  const d = loadJSON(SEQ_KEY, {});
-  P1_FIELDS.forEach(id => { if ($(id)) d[id] = $(id).value; });
-  saveJSON(SEQ_KEY, d);
-}
-P1_FIELDS.forEach(id => { const el = $(id); if (el) el.addEventListener('input', saveSeqManual); });
+// ── Sequence health ───────────────────────────────────────────
+const P1_FIELDS=['seqAP','seqMP'];
+const SEQ_KEY='jarvis_seq_v1';
+function loadSeqManual(){const d=loadJSON(SEQ_KEY,{});P1_FIELDS.forEach(id=>{if($(id)&&d[id]!=null)$(id).value=d[id];});}
+function saveSeqManual(){const d=loadJSON(SEQ_KEY,{});P1_FIELDS.forEach(id=>{if($(id))d[id]=$(id).value;});saveJSON(SEQ_KEY,d);}
+P1_FIELDS.forEach(id=>{const el=$(id);if(el)el.addEventListener('input',saveSeqManual);});
 loadSeqManual();
 
-// Auto-fetch enrolled + added from HubSpot (15 min poll, separate from main)
-let seqSyncing = false, seqCountdown = 10; // first fetch 10s after page load
-
+let seqSyncing=false, seqCountdown=12;
 async function loadSeqHealth() {
-  if (seqSyncing) return;
-  seqSyncing = true;
+  if(seqSyncing) return; seqSyncing=true;
   try {
-    const d = await fetch('/api/hubspot?type=contacts').then(async r => {
-      const j = await r.json(); if (!r.ok) throw new Error(j.error); return j;
-    });
-    setText('seqAE', d.anish.enrolled    ?? '—');
-    setText('seqME', d.michelle.enrolled  ?? '—');
-    setText('seqAW', d.anish.added        ?? '—');
-    setText('seqMW', d.michelle.added     ?? '—');
-    setText('seqSyncTime', new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }));
-    seqCountdown = 900; // 15 min
-  } catch (_) {
-    seqCountdown = 300; // retry in 5 min on error
+    const d=await fetch('/api/hubspot?type=contacts').then(async r=>{const j=await r.json();if(!r.ok)throw new Error(j.error);return j;});
+    setText('seqAE',d.anish.enrolled??'—'); setText('seqME',d.michelle.enrolled??'—');
+    setText('seqAW',d.anish.added??'—');    setText('seqMW',d.michelle.added??'—');
+    setText('seqSyncTime',new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}));
+    seqCountdown=900;
+  } catch(_){ seqCountdown=300; }
+  seqSyncing=false;
+}
+setInterval(()=>{seqCountdown--;if(seqCountdown<=0){seqCountdown=900;loadSeqHealth();}},1000);
+
+// ── JARVIS Voice + Chat interface ─────────────────────────────
+const chatHistory=[]; // [{role:'user',content:'...'},{role:'assistant',content:'...'}]
+let isListening=false, jProcessing=false;
+let silenceTimer=null, finalTranscript='';
+
+// Check voice support
+const SpeechRec=window.SpeechRecognition||window.webkitSpeechRecognition;
+const hasSpeech=!!SpeechRec;
+let recognition=null;
+
+if(hasSpeech) {
+  $('voiceNote').textContent='Click 🎤 to toggle always-listening mode';
+  recognition=new SpeechRec();
+  recognition.continuous=true;
+  recognition.interimResults=true;
+  recognition.lang='en-US';
+
+  recognition.onresult=e=>{
+    let interim='';
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      if(e.results[i].isFinal) finalTranscript+=e.results[i][0].transcript+' ';
+      else interim+=e.results[i][0].transcript;
+    }
+    setText('jTranscript', (finalTranscript+interim).trim() || '');
+    clearTimeout(silenceTimer);
+    if(finalTranscript.trim()){
+      silenceTimer=setTimeout(()=>{
+        const msg=finalTranscript.trim(); finalTranscript='';
+        setText('jTranscript','');
+        if(msg) sendToJarvis(msg);
+      },1500);
+    }
+  };
+
+  recognition.onerror=e=>{
+    if(e.error==='aborted'||e.error==='no-speech') return;
+    console.warn('speech error',e.error);
+  };
+
+  recognition.onend=()=>{
+    if(isListening){ try{ recognition.start(); }catch(_){} }
+  };
+} else {
+  $('voiceNote').textContent='Voice not supported in this browser. Use text input.';
+}
+
+function setListeningState(on) {
+  isListening=on;
+  const arcWrap=$('arcWrap'), micBtn=$('jMicBtn'), wave=$('jWave'), vDot=$('vDot'), vLabel=$('vLabel');
+  if(on){
+    arcWrap.classList.add('listening'); micBtn.classList.add('on');
+    wave.classList.add('on'); vDot.className='vdot live'; setText('vLabel','LISTENING');
+    try{ recognition.start(); }catch(_){}
+  } else {
+    arcWrap.classList.remove('listening'); micBtn.classList.remove('on');
+    wave.classList.remove('on'); vDot.className='vdot'; setText('vLabel','MUTED');
+    try{ recognition.stop(); }catch(_){}
+    clearTimeout(silenceTimer); finalTranscript=''; setText('jTranscript','');
   }
-  seqSyncing = false;
 }
 
-setInterval(() => {
-  seqCountdown--;
-  if (seqCountdown <= 0) { seqCountdown = 900; loadSeqHealth(); }
-}, 1000);
-
-// ── Settings modal (from original) ───────────────────────────────
-const WATER_KEY = 'po_water_v1';
-const WHOOP_KEY = 'whoop_tokens_v1';
-const SYNC_KEY  = 'whoop_last_sync';
-
-function defaultWater() {
-  return { unit:'bottle', bottleMl:500, glassMl:250, weightUnit:'kg',
-    profile:{ weightKg:75, age:25, sex:'m', activityHrsPerWeek:5 },
-    caffeineMgPerDay:200, substances:[], logs:{} };
+function setProcessingState(on) {
+  const vDot=$('vDot'), vLabel=$('vLabel');
+  if(on){ vDot.className='vdot proc'; setText('vLabel','PROCESSING'); }
+  else if(isListening){ vDot.className='vdot live'; setText('vLabel','LISTENING'); }
+  else{ vDot.className='vdot'; setText('vLabel','MUTED'); }
 }
 
-let heightUnit = 'cm', wghtUnit = 'kg', sex = 'm';
+$('jMicBtn').addEventListener('click',()=>{
+  if(!hasSpeech){ alert('Voice recognition is not supported in this browser. Please use Chrome.'); return; }
+  setListeningState(!isListening);
+});
 
-function setHeightUnit(u) {
-  heightUnit = u;
-  $('heightUnitSeg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.u === u));
-  if (u === 'cm') { $('heightA').placeholder = 'cm'; $('heightB').style.display = 'none'; }
-  else { $('heightA').placeholder = 'ft'; $('heightB').placeholder = 'in'; $('heightB').style.display = ''; }
+function appendChat(role,text) {
+  const el=$('chatEmpty'); if(el) el.remove();
+  const wrap=document.createElement('div'); wrap.className='chat-msg '+role;
+  const who=role==='user'?'You':'JARVIS';
+  wrap.innerHTML=`<div class="chat-who">${who}</div><div class="chat-bubble">${text}</div>`;
+  $('jChat').appendChild(wrap);
+  $('jChat').scrollTop=$('jChat').scrollHeight;
 }
-function setWeightUnit(u) {
-  wghtUnit = u;
-  $('weightUnitSeg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.u === u));
+
+async function sendToJarvis(msg) {
+  if(jProcessing||!msg.trim()) return;
+  jProcessing=true; setProcessingState(true);
+  appendChat('user', msg);
+  chatHistory.push({role:'user',content:msg});
+  // Stop listening while processing
+  if(isListening) try{ recognition.stop(); }catch(_){}
+
+  try {
+    const r=await fetch('/api/claude',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({message:msg, history:chatHistory.slice(0,-1)}),
+    });
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.error||`HTTP ${r.status}`);
+    const reply=d.reply||'—';
+    chatHistory.push({role:'assistant',content:reply});
+    appendChat('jarvis',reply);
+    speakReply(reply);
+  } catch(e) {
+    appendChat('jarvis',`Error: ${e.message}`);
+  }
+
+  jProcessing=false; setProcessingState(false);
+  // Resume listening
+  if(isListening) try{ recognition.start(); }catch(_){}
 }
-function setSex(s) {
-  sex = s;
-  $('sexSeg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.s === s));
+
+function speakReply(text) {
+  if(!window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.rate=1.05; u.pitch=0.95; u.volume=1;
+  const voices=speechSynthesis.getVoices();
+  const pref=voices.find(v=>/daniel|oliver|google uk|en-gb/i.test(v.name+v.lang))
+           || voices.find(v=>/en-us/i.test(v.lang));
+  if(pref) u.voice=pref;
+  speechSynthesis.speak(u);
 }
-function getHeightCm() {
-  if (heightUnit === 'cm') { const v = parseFloat($('heightA').value); return v > 0 ? v : null; }
-  const ft = parseFloat($('heightA').value)||0, inch = parseFloat($('heightB').value)||0;
-  const cm = ft*30.48 + inch*2.54; return cm > 0 ? Math.round(cm) : null;
+
+// Text input send
+function sendText() {
+  const inp=$('jTextInput'), msg=inp.value.trim(); if(!msg) return;
+  inp.value=''; sendToJarvis(msg);
 }
-function fillHeight(cm) {
-  if (!cm) { $('heightA').value=''; $('heightB').value=''; return; }
-  if (heightUnit === 'cm') { $('heightA').value = Math.round(cm); }
-  else { const ti = cm/2.54; $('heightA').value = Math.floor(ti/12); $('heightB').value = Math.round(ti%12); }
-}
-function populate() {
-  const w = loadJSON(WATER_KEY, defaultWater()), p = w.profile||{};
-  setWeightUnit(w.weightUnit === 'lb' ? 'lb' : 'kg');
-  setHeightUnit(p.heightUnit === 'ft' ? 'ft' : 'cm');
-  setSex(p.sex === 'f' ? 'f' : 'm');
-  fillHeight(p.heightCm||null);
-  if (p.weightKg) $('weight').value = wghtUnit==='lb' ? Math.round(p.weightKg*2.20462) : Math.round(p.weightKg);
-  else $('weight').value='';
-  $('age').value = p.age||'';
-  $('activity').value = p.activityHrsPerWeek!=null ? p.activityHrsPerWeek : '';
-}
-function saveSettings() {
-  const w = loadJSON(WATER_KEY, defaultWater()); w.profile = w.profile||{};
-  const cm = getHeightCm(); if (cm) { w.profile.heightCm = cm; w.profile.heightUnit = heightUnit; }
-  const wv = parseFloat($('weight').value);
-  if (wv>0) { w.profile.weightKg = wghtUnit==='lb' ? +(wv/2.20462).toFixed(1) : wv; w.weightUnit = wghtUnit; }
-  const age = parseInt($('age').value,10); if (age>0) w.profile.age = age;
-  w.profile.sex = sex;
-  const act = parseFloat($('activity').value); if (act>=0 && !isNaN(act)) w.profile.activityHrsPerWeek = act;
-  saveJSON(WATER_KEY, w);
-  const s = $('settingsStatus'); s.textContent='Saved ✓';
-  setTimeout(()=>{s.textContent='';},1800);
-}
-function openSettings() { populate(); renderWhoop(); $('settingsBg').classList.add('show'); syncWhoop(); }
-function closeSettings() { $('settingsBg').classList.remove('show'); }
-$('settingsOpen').addEventListener('click', openSettings);
-$('settingsClose').addEventListener('click', closeSettings);
-$('settingsBg').addEventListener('click', e => { if (e.target===$('settingsBg')) closeSettings(); });
-document.addEventListener('keydown', e => { if (e.key==='Escape') closeSettings(); });
-$('settingsSave').addEventListener('click', saveSettings);
+$('jSendBtn').addEventListener('click',sendText);
+$('jTextInput').addEventListener('keydown',e=>{if(e.key==='Enter')sendText();});
+
+// ── Settings modal ────────────────────────────────────────────
+const WATER_KEY='po_water_v1', WHOOP_KEY='whoop_tokens_v1', SYNC_KEY='whoop_last_sync';
+function defaultWater(){ return {unit:'bottle',bottleMl:500,glassMl:250,weightUnit:'kg',profile:{weightKg:75,age:25,sex:'m',activityHrsPerWeek:5},caffeineMgPerDay:200,substances:[],logs:{}}; }
+let heightUnit='cm', wghtUnit='kg', sex='m';
+function setHeightUnit(u){ heightUnit=u; $('heightUnitSeg').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.u===u)); if(u==='cm'){$('heightA').placeholder='cm';$('heightB').style.display='none';}else{$('heightA').placeholder='ft';$('heightB').placeholder='in';$('heightB').style.display='';} }
+function setWeightUnit(u){ wghtUnit=u; $('weightUnitSeg').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.u===u)); }
+function setSex(s){ sex=s; $('sexSeg').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.s===s)); }
+function getHeightCm(){ if(heightUnit==='cm'){const v=parseFloat($('heightA').value);return v>0?v:null;} const ft=parseFloat($('heightA').value)||0,inch=parseFloat($('heightB').value)||0,cm=ft*30.48+inch*2.54;return cm>0?Math.round(cm):null; }
+function fillHeight(cm){ if(!cm){$('heightA').value='';$('heightB').value='';return;} if(heightUnit==='cm'){$('heightA').value=Math.round(cm);}else{const ti=cm/2.54;$('heightA').value=Math.floor(ti/12);$('heightB').value=Math.round(ti%12);} }
+function populate(){ const w=loadJSON(WATER_KEY,defaultWater()),p=w.profile||{}; setWeightUnit(w.weightUnit==='lb'?'lb':'kg'); setHeightUnit(p.heightUnit==='ft'?'ft':'cm'); setSex(p.sex==='f'?'f':'m'); fillHeight(p.heightCm||null); if(p.weightKg)$('weight').value=wghtUnit==='lb'?Math.round(p.weightKg*2.20462):Math.round(p.weightKg);else $('weight').value=''; $('age').value=p.age||''; $('activity').value=p.activityHrsPerWeek!=null?p.activityHrsPerWeek:''; }
+function saveSettings(){ const w=loadJSON(WATER_KEY,defaultWater());w.profile=w.profile||{}; const cm=getHeightCm();if(cm){w.profile.heightCm=cm;w.profile.heightUnit=heightUnit;} const wv=parseFloat($('weight').value);if(wv>0){w.profile.weightKg=wghtUnit==='lb'?+(wv/2.20462).toFixed(1):wv;w.weightUnit=wghtUnit;} const age=parseInt($('age').value,10);if(age>0)w.profile.age=age; w.profile.sex=sex; const act=parseFloat($('activity').value);if(act>=0&&!isNaN(act))w.profile.activityHrsPerWeek=act; saveJSON(WATER_KEY,w); const s=$('settingsStatus');s.textContent='Saved ✓';setTimeout(()=>{s.textContent='';},1800); }
+function openSettings(){ populate(); renderWhoop(); $('settingsBg').classList.add('show'); syncWhoop(); }
+function closeSettings(){ $('settingsBg').classList.remove('show'); }
+$('settingsOpen').addEventListener('click',openSettings);
+const so2=$('settingsOpen2'); if(so2) so2.addEventListener('click',e=>{e.preventDefault();openSettings();});
+$('settingsClose').addEventListener('click',closeSettings);
+$('settingsBg').addEventListener('click',e=>{if(e.target===$('settingsBg'))closeSettings();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSettings();});
+$('settingsSave').addEventListener('click',saveSettings);
 $('heightUnitSeg').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{const cm=getHeightCm();setHeightUnit(b.dataset.u);fillHeight(cm);}));
-$('weightUnitSeg').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
-  const v=parseFloat($('weight').value), kg=v>0?(wghtUnit==='lb'?v/2.20462:v):null;
-  setWeightUnit(b.dataset.u); if(kg) $('weight').value=wghtUnit==='lb'?Math.round(kg*2.20462):Math.round(kg);
-}));
+$('weightUnitSeg').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{const v=parseFloat($('weight').value),kg=v>0?(wghtUnit==='lb'?v/2.20462:v):null;setWeightUnit(b.dataset.u);if(kg)$('weight').value=wghtUnit==='lb'?Math.round(kg*2.20462):Math.round(kg);}));
 $('sexSeg').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>setSex(b.dataset.s)));
 
 // WHOOP
-let whStats = null;
-function relTime(ts) {
-  if (!ts) return 'never';
-  const s = Math.floor((Date.now()-ts)/1000);
-  if (s<60) return 'just now';
-  if (s<3600) return Math.floor(s/60)+' min ago';
-  if (s<86400) return Math.floor(s/3600)+' h ago';
-  return Math.floor(s/86400)+' d ago';
-}
-function renderWhoop(err) {
-  const t = loadJSON(WHOOP_KEY,null);
-  const statusEl=$('whStatus'),txt=$('whStatusText'),syncEl=$('whSync'),action=$('whAction');
-  if (!t||!t.access) { statusEl.classList.remove('on'); txt.textContent='Not connected'; syncEl.textContent=''; $('whStats').style.display='none'; action.textContent='Connect on Health page'; return; }
-  statusEl.classList.add('on'); txt.textContent=err?'Connected (sync failed)':'Connected';
-  const last=Number(localStorage.getItem(SYNC_KEY))||0; syncEl.textContent='Last synced '+relTime(last);
-  action.textContent='Sync now';
-  if (whStats) { $('whStats').style.display=''; $('whRec').textContent=whStats.rec!=null?whStats.rec+'%':'—'; $('whSleep').textContent=whStats.sleep!=null?whStats.sleep+'%':'—'; $('whRhr').textContent=whStats.rhr!=null?whStats.rhr:'—'; }
-}
-async function wRefresh(t) {
-  if (!t.refresh) return null;
-  try {
-    const r=await fetch('/api/whoop-refresh',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({refresh_token:t.refresh})});
-    const j=await r.json();
-    if (j.access_token){const n={access:j.access_token,refresh:j.refresh_token||t.refresh,expires:Date.now()+(j.expires_in||3500)*1000};saveJSON(WHOOP_KEY,n);return n;}
-  } catch(e){}
-  return null;
-}
-async function wFetch(path,t) {
-  const [p,qs]=path.split('?'); const params=new URLSearchParams(qs||''); params.set('path',p);
-  const r=await fetch('/api/whoop-data?'+params.toString(),{headers:{'Authorization':'Bearer '+t.access,'Accept':'application/json'}});
-  if (r.status===401){const n=await wRefresh(t);if(n)return wFetch(path,n);throw new Error('unauthorized');}
-  if (!r.ok) throw new Error('whoop '+r.status);
-  return r.json();
-}
-async function syncWhoop() {
-  let t=loadJSON(WHOOP_KEY,null); if(!t||!t.access) return;
-  if (t.expires&&Date.now()>t.expires-60000){const n=await wRefresh(t);if(n)t=n;}
-  try {
-    const [rec,sleep]=await Promise.all([wFetch('/recovery?limit=1',t).catch(()=>null),wFetch('/activity/sleep?limit=1',t).catch(()=>null)]);
-    const r0=rec&&rec.records&&rec.records[0]; const s0=sleep&&sleep.records&&sleep.records[0];
-    whStats={rec:r0&&r0.score&&r0.score.recovery_score!=null?Math.round(r0.score.recovery_score):null,rhr:r0&&r0.score&&r0.score.resting_heart_rate!=null?Math.round(r0.score.resting_heart_rate):null,sleep:s0&&s0.score&&s0.score.sleep_performance_percentage!=null?Math.round(s0.score.sleep_performance_percentage):null};
-    localStorage.setItem(SYNC_KEY,String(Date.now())); renderWhoop();
-  } catch(e){renderWhoop(e);}
-}
-$('whAction').addEventListener('click',()=>{const t=loadJSON(WHOOP_KEY,null);if(!t||!t.access){window.location.href='health.html';return;}$('whAction').textContent='Syncing…';syncWhoop();});
+let whStats=null;
+function relTime(ts){ if(!ts)return'never';const s=Math.floor((Date.now()-ts)/1000);if(s<60)return'just now';if(s<3600)return Math.floor(s/60)+' min ago';if(s<86400)return Math.floor(s/3600)+' h ago';return Math.floor(s/86400)+' d ago'; }
+function renderWhoop(err){ const t=loadJSON(WHOOP_KEY,null),statusEl=$('whStatus'),txt=$('whStatusText'),syncEl=$('whSync'),action=$('whAction'); if(!t||!t.access){statusEl.classList.remove('on');txt.textContent='Not connected';syncEl.textContent='';$('whStats').style.display='none';action.textContent='Connect on Health page';return;} statusEl.classList.add('on');txt.textContent=err?'Connected (sync failed)':'Connected';const last=Number(localStorage.getItem(SYNC_KEY))||0;syncEl.textContent='Last synced '+relTime(last);action.textContent='Sync now'; if(whStats){$('whStats').style.display='';$('whRec').textContent=whStats.rec!=null?whStats.rec+'%':'—';$('whSleep').textContent=whStats.sleep!=null?whStats.sleep+'%':'—';$('whRhr').textContent=whStats.rhr!=null?whStats.rhr:'—';} }
+async function wRefresh(t){ if(!t.refresh)return null; try{const r=await fetch('/api/whoop-refresh',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({refresh_token:t.refresh})});const j=await r.json();if(j.access_token){const n={access:j.access_token,refresh:j.refresh_token||t.refresh,expires:Date.now()+(j.expires_in||3500)*1000};saveJSON(WHOOP_KEY,n);return n;}}catch(e){}return null; }
+async function wFetch(path,t){ const[p,qs]=path.split('?');const params=new URLSearchParams(qs||'');params.set('path',p);const r=await fetch('/api/whoop-data?'+params.toString(),{headers:{'Authorization':'Bearer '+t.access,'Accept':'application/json'}});if(r.status===401){const n=await wRefresh(t);if(n)return wFetch(path,n);throw new Error('unauthorized');}if(!r.ok)throw new Error('whoop '+r.status);return r.json(); }
+async function syncWhoop(){ let t=loadJSON(WHOOP_KEY,null);if(!t||!t.access)return;if(t.expires&&Date.now()>t.expires-60000){const n=await wRefresh(t);if(n)t=n;} try{const[rec,sleep]=await Promise.all([wFetch('/recovery?limit=1',t).catch(()=>null),wFetch('/activity/sleep?limit=1',t).catch(()=>null)]);const r0=rec&&rec.records&&rec.records[0];const s0=sleep&&sleep.records&&sleep.records[0];whStats={rec:r0&&r0.score&&r0.score.recovery_score!=null?Math.round(r0.score.recovery_score):null,rhr:r0&&r0.score&&r0.score.resting_heart_rate!=null?Math.round(r0.score.resting_heart_rate):null,sleep:s0&&s0.score&&s0.score.sleep_performance_percentage!=null?Math.round(s0.score.sleep_performance_percentage):null};localStorage.setItem(SYNC_KEY,String(Date.now()));renderWhoop();}catch(e){renderWhoop(e);} }
+$('whAction').addEventListener('click',()=>{ const t=loadJSON(WHOOP_KEY,null);if(!t||!t.access){window.location.href='health.html';return;}$('whAction').textContent='Syncing…';syncWhoop(); });
 
 })();
 </script>
